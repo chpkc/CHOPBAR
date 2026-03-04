@@ -177,14 +177,9 @@ async def get_occupied_slots(master: str, date: str):
 @app.get("/booking/active")
 async def get_active_booking(telegram_id: str):
     if not supabase:
-        return {"active": None}
+        return {"booking": None}
     try:
-        # Check for future bookings that are 'new'
-        # We need to filter by date/time > now
-        # Supabase filtering for date/time > now is tricky with separate date/time columns.
-        # We'll fetch all 'new' bookings for the user and filter in python for simplicity
-        # unless there are thousands, which is unlikely for a single user.
-        
+        # Fetch 'new' bookings for the user
         response = supabase.table('bookings')\
             .select('*')\
             .eq('telegram_id', telegram_id)\
@@ -194,29 +189,32 @@ async def get_active_booking(telegram_id: str):
         bookings = response.data
         now = datetime.datetime.now()
         
-        active = None
+        # Sort bookings by date and time
+        # We want the nearest future booking, OR if all are in past (but status=new), show the most recent one?
+        # Actually, if status is 'new', we should probably just show it.
+        # But if there are multiple, we want the earliest one (next appointment).
+        
+        valid_bookings = []
         for b in bookings:
             try:
-                booking_dt = datetime.datetime.strptime(f"{b['date']} {b['time']}", "%Y-%m-%d %H:%M")
-                if booking_dt > now:
-                    # Found a future booking
-                    # If multiple, take the soonest one? Or just the first found?
-                    # Let's take the soonest one.
-                    if active is None:
-                        active = b
-                        active['dt'] = booking_dt
-                    elif booking_dt < active['dt']:
-                        active = b
-                        active['dt'] = booking_dt
+                dt = datetime.datetime.strptime(f"{b['date']} {b['time']}", "%Y-%m-%d %H:%M")
+                valid_bookings.append({**b, 'dt': dt})
             except ValueError:
-                continue # Skip invalid date formats
+                continue
+
+        if not valid_bookings:
+            return {"booking": None}
+            
+        # Sort by datetime
+        valid_bookings.sort(key=lambda x: x['dt'])
         
-        if active:
-            # Remove the temp dt object before returning
-            del active['dt']
-            return active
-        else:
-            return None # No active booking
+        # Return the first one (earliest 'new' booking)
+        # Even if it's slightly in the past, if it's 'new', the user might still be on their way or it's just happening.
+        # The cron job will clean it up later.
+        active = valid_bookings[0]
+        del active['dt']
+        
+        return {"booking": active}
             
     except Exception as e:
         print(f"Error fetching active booking: {e}")

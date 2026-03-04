@@ -633,7 +633,8 @@
             font-family: 'Unbounded', sans-serif;
             font-size: 44px;
             font-weight: 900;
-            color: var(--accent-gold);
+            color: #ffffff;
+            /* color: var(--accent-gold); */
         }
 
         .confirm-btn {
@@ -1554,7 +1555,14 @@
     }
     
     async function cancelCurrentBooking() {
-        if (!currentBookingId) return;
+        if (!currentBookingId) {
+            console.warn("No currentBookingId found, attempting to reload active booking...");
+            await loadActiveBooking();
+            if (!currentBookingId) {
+                alert("Ошибка: Не найдена активная запись для отмены.");
+                return;
+            }
+        }
         
         // No confirm() as per request for custom UI only. 
         // Assuming direct action is desired or I should use the overlay?
@@ -1581,6 +1589,7 @@
             
         } catch(e) {
             console.error("Failed to cancel", e);
+            alert("Не удалось отменить запись. Попробуйте позже.");
         } finally {
             document.getElementById('loading').classList.add('hidden');
         }
