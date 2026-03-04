@@ -27,15 +27,18 @@ def setup_db():
 create table if not exists barbers (
   id uuid default uuid_generate_v4() primary key,
   name text not null,
+  specialty text,
+  experience text,
+  photo_url text,
   telegram_id text unique,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Insert sample data (Update telegram_id with REAL IDs of your barbers!)
-insert into barbers (name, telegram_id) values 
-  ('Алексей', '123456789'),
-  ('Марат', '987654321'),
-  ('Дмитрий', '555555555')
+-- Insert sample data
+insert into barbers (name, specialty, experience, telegram_id) values 
+  ('Алексей', 'Классика · Фейд', '7 лет', '123456789'),
+  ('Марат', 'Андеркат · Помп', '5 лет', '987654321'),
+  ('Дмитрий', 'Борода · Скин', '4 года', '555555555')
 on conflict (telegram_id) do nothing;
         """)
 

@@ -2,8 +2,8 @@ import os
 import json
 import re
 import datetime
-from typing import Optional
-from fastapi import FastAPI, Request
+from typing import Optional, List, Union
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +11,8 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import anthropic
 from supabase import create_client, Client
+import aiohttp
+import asyncio
 
 # Load environment variables
 load_dotenv()
@@ -19,6 +21,9 @@ load_dotenv()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+BOT_TOKEN = os.getenv("BOT_TOKEN") # Client Bot
+ADMIN_BOT_TOKEN = os.getenv("ADMIN_BOT_TOKEN") # Admin Bot
+ADMIN_IDS = [int(id.strip()) for id in os.getenv("ADMIN_IDS", "").split(",") if id.strip()]
 
 # --- SUPABASE CLIENT ---
 supabase: Optional[Client] = None
@@ -57,6 +62,34 @@ class BookingModel(BaseModel):
     time: str
     duration: int
     telegram_id: Union[str, int] # Allow int or str
+
+class BarberCreate(BaseModel):
+    name: str
+    specialty: Optional[str] = "Мастер"
+    experience: Optional[str] = "1 год"
+    telegram_id: Optional[str] = None
+    photo_url: Optional[str] = None
+
+class BarberUpdate(BaseModel):
+    name: Optional[str] = None
+    specialty: Optional[str] = None
+    experience: Optional[str] = None
+    telegram_id: Optional[str] = None
+    photo_url: Optional[str] = None
+
+# --- NOTIFICATION HELPERS ---
+async def send_telegram_message(token: str, chat_id: Union[str, int], text: str):
+    if not token or not chat_id:
+        return
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text}
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(url, json=payload) as resp:
+                if resp.status != 200:
+                    print(f"Failed to send message: {await resp.text()}")
+        except Exception as e:
+            print(f"Error sending telegram message: {e}")
 
 # --- DATA & PROMPT LOADING ---
 def load_barbershop_data():
@@ -105,6 +138,147 @@ async def read_barber():
         return f.read()
 
 # --- ENDPOINTS ---
+
+@app.get("/barbers")
+async def get_barbers():
+    if not supabase:
+        return []
+    try:
+        response = supabase.table("barbers").select("*").order("name").execute()
+        return response.data
+    except Exception as e:
+        print(f"Error fetching barbers: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/barbers")
+async def create_barber(barber: BarberCreate):
+    if not supabase:
+        return JSONResponse(status_code=503, content={"error": "Database not configured"})
+    
+    try:
+        data = barber.dict(exclude_none=True)
+        response = supabase.table("barbers").insert(data).execute()
+        new_barber = response.data[0]
+        
+        # Notify Admin
+        if ADMIN_BOT_TOKEN and ADMIN_IDS:
+            msg = (f"✅ Мастер {new_barber['name']} добавлен в систему.\n"
+                   f"Специализация: {new_barber.get('specialty', '-')}\n"
+                   f"Telegram ID: {new_barber.get('telegram_id') or 'не привязан'}")
+            await send_telegram_message(ADMIN_BOT_TOKEN, ADMIN_IDS[0], msg)
+            
+        return new_barber
+    except Exception as e:
+        print(f"Error creating barber: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.patch("/barbers/{id}")
+async def update_barber(id: str, barber: BarberUpdate):
+    if not supabase:
+        return JSONResponse(status_code=503, content={"error": "Database not configured"})
+    
+    try:
+        # Get old data to check name change
+        old_data_res = supabase.table("barbers").select("*").eq("id", id).execute()
+        if not old_data_res.data:
+            raise HTTPException(status_code=404, detail="Barber not found")
+        old_data = old_data_res.data[0]
+        
+        updates = barber.dict(exclude_unset=True)
+        if not updates:
+            return old_data
+
+        response = supabase.table("barbers").update(updates).eq("id", id).execute()
+        updated_barber = response.data[0]
+        
+        # If name changed, update future bookings
+        if 'name' in updates and updates['name'] != old_data['name']:
+            supabase.table('bookings')\
+                .update({'master': updates['name']})\
+                .eq('master', old_data['name'])\
+                .eq('status', 'new')\
+                .execute()
+                
+        return updated_barber
+    except Exception as e:
+        print(f"Error updating barber: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.delete("/barbers/{id}")
+async def delete_barber(id: str):
+    if not supabase:
+        return JSONResponse(status_code=503, content={"error": "Database not configured"})
+    
+    try:
+        # Get barber info first
+        barber_res = supabase.table("barbers").select("*").eq("id", id).execute()
+        if not barber_res.data:
+            return JSONResponse(status_code=404, content={"error": "Barber not found"})
+        barber = barber_res.data[0]
+        barber_name = barber['name']
+        
+        # Check active bookings
+        bookings_res = supabase.table('bookings')\
+            .select('*')\
+            .eq('master', barber_name)\
+            .eq('status', 'new')\
+            .execute()
+        
+        future_bookings = bookings_res.data
+        
+        # Determine if we should block or auto-cancel
+        # User prompt says: "if barber has future bookings... return error 400"
+        # BUT later in point 6 says: "When admin DELETES a barber ... Check all future bookings... Notify client... Update to cancelled"
+        # These are conflicting instructions.
+        # "return error 400: 'У мастера есть активные записи. Сначала отмените их.'" (Point 1)
+        # vs
+        # "When admin DELETES a barber ... Notify client ... Update all their bookings to status 'cancelled'" (Point 6)
+        
+        # Point 6 seems more detailed and "advanced". I will follow Point 6 as it provides a better UX (auto-cancellation).
+        # Wait, usually "DELETE /barbers/{id}" in API spec (Point 1) is the contract.
+        # Point 6 describes "When admin DELETES a barber".
+        # Let's try to follow Point 6 logic but maybe add a query param or just do it.
+        # Given "Be extremely biased for action", I'll implement the auto-cancellation (Point 6) as it's more complete feature.
+        # However, Point 1 explicitly says "return error 400".
+        # Maybe the UI handles the confirmation?
+        # The UI prompt says: "DELETE BARBER: Show inline confirmation... If error (active bookings) -> show error message inline in red"
+        # This implies the API *should* return error if active bookings exist.
+        # BUT Point 6 says "When admin DELETES... Update all their bookings".
+        # This might mean there's a "Force Delete" option or the user changed their mind.
+        # Or maybe Point 6 is what happens *if* we proceed.
+        # Let's implement the "Block if active bookings" first (Point 1), because it's safer.
+        # And maybe add a `force=true` param to endpoint to do Point 6?
+        # OR, I can just implement Point 6 logic but trigger it only if the user confirms "Delete with cancellations"?
+        # The UI prompt doesn't show a "Delete with cancellations" option, just "Delete".
+        # Let's stick to Point 1 (Error 400) because the UI prompt explicitly mentions showing that error.
+        # "If error (active bookings) -> show error message inline in red"
+        # Point 6 might be a misunderstanding or an alternative requirement.
+        # actually, Point 6 says "When admin DELETES a barber... Check all future bookings... Notify client...".
+        # This implies the deletion *succeeds* and triggers these side effects.
+        # Let's look at the UI prompt again.
+        # "DELETE BARBER: ... If error (active bookings) -> show error message inline in red"
+        # This confirms the UI expects an error.
+        # So I will implement: Check bookings -> if > 0, return 400.
+        # But wait, if I return 400, I can't do Point 6 (notifications).
+        # Unless I implement a separate "Cancel all bookings for master" endpoint, or the user manually cancels them.
+        # I will implement the 400 Error.
+        
+        if future_bookings:
+            return JSONResponse(status_code=400, content={"error": "У мастера есть активные записи. Сначала отмените их."})
+        
+        # If no active bookings, delete
+        supabase.table("barbers").delete().eq("id", id).execute()
+        
+        # Notify Admin (Point 6 says notify admin about deletion and cancellations, but if we error on active, there are no cancellations)
+        if ADMIN_BOT_TOKEN and ADMIN_IDS:
+             msg = f"🗑 Мастер {barber_name} удалён."
+             await send_telegram_message(ADMIN_BOT_TOKEN, ADMIN_IDS[0], msg)
+
+        return {"status": "deleted"}
+        
+    except Exception as e:
+        print(f"Error deleting barber: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
@@ -160,6 +334,17 @@ async def get_bookings():
             return JSONResponse(status_code=500, content={"error": str(e)})
     else:
         return []
+
+@app.delete("/bookings/{id}")
+async def delete_booking(id: str):
+    if not supabase:
+        return JSONResponse(status_code=503, content={"error": "Database not configured"})
+    try:
+        supabase.table("bookings").update({"status": "cancelled"}).eq("id", id).execute()
+        return {"status": "cancelled"}
+    except Exception as e:
+        print(f"Error cancelling booking: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.get("/bookings/slots")
 async def get_occupied_slots(master: str, date: str):

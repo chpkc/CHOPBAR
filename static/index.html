@@ -1043,11 +1043,7 @@
     tg.expand();
 
     // --- DATA ---
-    const barbers = [
-        { name: "Алексей", specialty: "Классика · Фейд", experience: "7 лет", id: "alex", bg: "#2C1810" },
-        { name: "Марат", specialty: "Андеркат · Помп", experience: "5 лет", id: "marat", bg: "#0F1E26" },
-        { name: "Дмитрий", specialty: "Борода · Скин", experience: "4 года", id: "dmitry", bg: "#1A0F0F" }
-    ];
+    let barbers = [];
 
     const services = [
         { name: "Мужская стрижка", price: 1200, duration: 45, id: "haircut" },
@@ -1074,7 +1070,9 @@
     let navigationStack = ['home-screen'];
 
     // --- INIT ---
-    function init() {
+    async function init() {
+        await loadBarbers();
+
         renderBarberList('masters-preview-list', barbers, false);
         renderServicesGrid('services-preview-list', services, false);
         
@@ -1086,6 +1084,26 @@
         
         // Trigger initial animation for home screen
         animateContent('home-screen');
+    }
+    
+    async function loadBarbers() {
+        try {
+            const res = await fetch('/barbers');
+            const data = await res.json();
+            // Map data to match frontend format if needed
+            // DB: id, name, specialty, experience, photo_url, telegram_id
+            // Frontend expects: name, specialty, experience, id, bg (optional)
+            barbers = data.map(b => ({
+                name: b.name,
+                specialty: b.specialty || "Мастер",
+                experience: b.experience || "",
+                id: b.id,
+                bg: "#1A1208", // Default dark bg
+                // Use photo_url if we implement images later
+            }));
+        } catch (e) {
+            console.error("Failed to load barbers", e);
+        }
     }
 
     // --- RENDERERS ---
