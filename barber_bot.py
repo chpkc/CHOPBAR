@@ -3,7 +3,7 @@ import os
 import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Bot
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Bot, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from supabase import create_client, Client
 
@@ -13,6 +13,7 @@ load_dotenv()
 # --- CONFIGURATION ---
 BARBER_BOT_TOKEN = os.getenv("BARBER_BOT_TOKEN")
 CLIENT_BOT_TOKEN = os.getenv("BOT_TOKEN") # Main bot token to notify clients
+MINI_APP_URL = os.getenv("MINI_APP_URL")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
@@ -60,8 +61,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             if not app_url.endswith('/'): app_url += '/'
             if not app_url.endswith('barber/'): 
                 if 'barber' not in app_url: app_url += 'barber'
-        
-        from telegram import WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
         
         kb = [[KeyboardButton("✂️ Открыть рабочий стол", web_app=WebAppInfo(url=app_url))]]
         
