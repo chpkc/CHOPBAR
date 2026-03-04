@@ -1458,7 +1458,10 @@
                 tg.MainButton.show();
                 tg.MainButton.onClick(() => tg.close());
             } else {
-                alert("Ошибка при сохранении");
+                // Show specific error from backend if available
+                const errorMsg = result.details || result.error || "Неизвестная ошибка";
+                alert(`Ошибка при сохранении: ${errorMsg}`);
+                console.error("Booking error:", result);
             }
 
         } catch (e) {
