@@ -156,20 +156,84 @@ async def get_bookings():
     else:
         return []
 
+@app.get("/bookings/slots")
+async def get_occupied_slots(master: str, date: str):
+    if not supabase:
+        return {"occupied": []}
+    try:
+        # User wants occupied times for that master on that date
+        # Also exclude cancelled bookings
+        result = supabase.table('bookings')\
+            .select('time')\
+            .eq('master', master)\
+            .eq('date', date)\
+            .neq('status', 'cancelled')\
+            .execute()
+        return {"occupied": [b['time'] for b in result.data]}
+    except Exception as e:
+        print(f"Error fetching slots: {e}")
+        return {"occupied": [], "error": str(e)}
+
+@app.get("/booking/active")
+async def get_active_booking(telegram_id: str):
+    if not supabase:
+        return {"active": None}
+    try:
+        # Check for future bookings that are 'new'
+        # We need to filter by date/time > now
+        # Supabase filtering for date/time > now is tricky with separate date/time columns.
+        # We'll fetch all 'new' bookings for the user and filter in python for simplicity
+        # unless there are thousands, which is unlikely for a single user.
+        
+        response = supabase.table('bookings')\
+            .select('*')\
+            .eq('telegram_id', telegram_id)\
+            .eq('status', 'new')\
+            .execute()
+            
+        bookings = response.data
+        now = datetime.datetime.now()
+        
+        active = None
+        for b in bookings:
+            try:
+                booking_dt = datetime.datetime.strptime(f"{b['date']} {b['time']}", "%Y-%m-%d %H:%M")
+                if booking_dt > now:
+                    # Found a future booking
+                    # If multiple, take the soonest one? Or just the first found?
+                    # Let's take the soonest one.
+                    if active is None:
+                        active = b
+                        active['dt'] = booking_dt
+                    elif booking_dt < active['dt']:
+                        active = b
+                        active['dt'] = booking_dt
+            except ValueError:
+                continue # Skip invalid date formats
+        
+        if active:
+            # Remove the temp dt object before returning
+            del active['dt']
+            return active
+        else:
+            return None # No active booking
+            
+    except Exception as e:
+        print(f"Error fetching active booking: {e}")
+        return {"error": str(e)}
+
 @app.delete("/bookings/{booking_id}")
 async def delete_booking(booking_id: str):
     if supabase:
         try:
-            # Soft delete or hard delete? Let's do hard delete for now or update status
-            # admin_app.py filters by status, so maybe soft delete is better if we have a 'cancelled' status
-            # But the previous code did soft delete. Let's stick to that.
+            # Update status to cancelled
             response = supabase.table("bookings").update({"status": "cancelled"}).eq("id", booking_id).execute()
-            return {"status": "cancelled"}
+            return {"status": "cancelled", "id": booking_id}
         except Exception as e:
             print(f"Supabase delete error: {e}")
-            return {"error": str(e)}
+            return JSONResponse(status_code=500, content={"error": str(e)})
     else:
-        return {"error": "Database not configured"}
+        return JSONResponse(status_code=503, content={"error": "Database not configured"})
 
 if __name__ == "__main__":
     import uvicorn

@@ -60,37 +60,54 @@ async def check_and_notify(bot):
         return
 
     try:
-        response = supabase.table('bookings').select('*').eq('status','new').execute()
-        bookings = response.data
+        result = supabase.table('bookings')\
+            .select('*')\
+            .eq('status', 'new')\
+            .execute()
         
         now = datetime.now()
         
-        for b in bookings:
+        for b in result.data:
             try:
-                # b['date'] is YYYY-MM-DD, b['time'] is HH:MM
+                # Parse booking time
                 booking_dt = datetime.strptime(f"{b['date']} {b['time']}", "%Y-%m-%d %H:%M")
                 delta = booking_dt - now
-                hours_left = delta.total_seconds() / 3600
+                hours = delta.total_seconds() / 3600
                 
-                # 24 hour reminder
-                if 23.75 <= hours_left <= 24.25:
-                    if not b.get('notified_24h'):
-                        await bot.send_message(
-                            chat_id=b['telegram_id'],
-                            text=f"✂️ Напоминание!\n\nЗавтра в {b['time']} вас ждёт мастер {b['master']}.\nУслуга: {b['service']}\nСтоимость: {b['price']}₸\n\nБарбершоп CHOP, Павлодар"
+                # 24h reminder (23.5 to 24.5 hours before)
+                # Note: We use .get() for boolean fields to default to False if column is missing (though we tried to add them)
+                if 23.5 <= hours <= 24.5 and not b.get('notified_24h'):
+                    await bot.send_message(
+                        chat_id=b['telegram_id'],
+                        text=(
+                            f"✂️ Напоминание о записи!\n\n"
+                            f"Завтра в {b['time']} вас ждёт мастер {b['master']}.\n"
+                            f"Услуга: {b['service']}\n"
+                            f"Стоимость: {b['price']}₸\n\n"
+                            f"Барбершоп CHOP · Павлодар 💈"
                         )
-                        supabase.table('bookings').update({'notified_24h': True}).eq('id', b['id']).execute()
+                    )
+                    supabase.table('bookings')\
+                        .update({'notified_24h': True})\
+                        .eq('id', b['id']).execute()
                 
-                # 2 hour reminder
-                if 1.75 <= hours_left <= 2.25:
-                    if not b.get('notified_2h'):
-                        await bot.send_message(
-                            chat_id=b['telegram_id'],
-                            text=f"⏰ Через 2 часа!\n\nВас ждёт мастер {b['master']} в {b['time']}.\nУслуга: {b['service']}\n\nДо встречи в CHOP! 💈"
+                # 2h reminder (1.5 to 2.5 hours before)
+                if 1.5 <= hours <= 2.5 and not b.get('notified_2h'):
+                    await bot.send_message(
+                        chat_id=b['telegram_id'],
+                        text=(
+                            f"⏰ Через 2 часа стрижка!\n\n"
+                            f"Мастер {b['master']} ждёт вас в {b['time']}.\n"
+                            f"Услуга: {b['service']}\n\n"
+                            f"До встречи в CHOP! 💈"
                         )
-                        supabase.table('bookings').update({'notified_2h': True}).eq('id', b['id']).execute()
+                    )
+                    supabase.table('bookings')\
+                        .update({'notified_2h': True})\
+                        .eq('id', b['id']).execute()
+                        
             except Exception as e:
-                logger.error(f"Error processing booking {b.get('id')}: {e}")
+                logger.error(f"Reminder error for booking {b.get('id')}: {e}")
                 
     except Exception as e:
         logger.error(f"Error in check_and_notify: {e}")
