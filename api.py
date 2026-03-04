@@ -42,6 +42,7 @@ app.add_middleware(
 )
 
 # --- MODELS ---
+from typing import Optional, Union
 import uuid
 
 class ChatRequest(BaseModel):
@@ -55,7 +56,7 @@ class BookingModel(BaseModel):
     date: str
     time: str
     duration: int
-    telegram_id: str
+    telegram_id: Union[str, int] # Allow int or str
 
 # --- DATA & PROMPT LOADING ---
 def load_barbershop_data():
@@ -129,6 +130,8 @@ async def create_booking(booking: BookingModel):
     
     # Generate UUID for the booking
     booking_data["id"] = str(uuid.uuid4())
+    # Ensure telegram_id is string for Supabase
+    booking_data["telegram_id"] = str(booking_data["telegram_id"])
     
     if supabase:
         try:
