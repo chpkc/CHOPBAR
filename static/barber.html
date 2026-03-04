@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>CHOP BAR. BARBER</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@400;500;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #F9F4EA;
+            --primary-dark: #1A1208;
+            --accent-gold: #D4A853;
+            --text-muted: #8A7A5E;
+            --divider-color: #E8DFC8;
+            --card-bg: #FFFFFF;
+            --danger: #E53E3E;
+            --success: #2E7D32;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-dark);
+            margin: 0;
+            padding: 0;
+            padding-bottom: 40px;
+        }
+
+        header {
+            background-color: var(--primary-dark);
+            color: white;
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 2px solid var(--accent-gold);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-family: 'Unbounded', sans-serif;
+            font-weight: 900;
+            font-size: 16px;
+            margin: 0;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        
+        .barber-name {
+            font-family: 'Unbounded', sans-serif;
+            color: var(--accent-gold);
+            font-size: 12px;
+        }
+
+        .container {
+            padding: 16px;
+        }
+
+        .booking-card {
+            background: var(--card-bg);
+            border: 1px solid var(--divider-color);
+            padding: 16px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .booking-card.done {
+            opacity: 0.7;
+            background: #f0f0f0;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .time-badge {
+            background-color: var(--primary-dark);
+            color: var(--accent-gold);
+            font-family: 'Unbounded', sans-serif;
+            font-size: 14px;
+            padding: 6px 10px;
+            font-weight: 700;
+        }
+
+        .price-tag {
+            font-family: 'Unbounded', sans-serif;
+            font-weight: 900;
+            font-size: 16px;
+            color: var(--primary-dark);
+        }
+
+        .service-title {
+            font-family: 'Unbounded', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .client-info {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .actions {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .btn {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 12px 16px;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-cancel {
+            background: transparent;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+
+        .btn-done {
+            background: var(--primary-dark);
+            color: var(--accent-gold);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-family: 'Unbounded', sans-serif;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .tabs {
+            display: flex;
+            background: #fff;
+            border-bottom: 1px solid var(--divider-color);
+            position: sticky;
+            top: 61px;
+            z-index: 90;
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 16px;
+            font-family: 'Unbounded', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            color: var(--primary-dark);
+            border-bottom-color: var(--accent-gold);
+        }
+
+        .hidden { display: none !important; }
+        
+        .status-label {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            text-align: right;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>РАБОЧИЙ СТОЛ</h1>
+    <span class="barber-name" id="barber-name">...</span>
+</header>
+
+<div class="tabs">
+    <div class="tab active" onclick="switchTab('today')">СЕГОДНЯ</div>
+    <div class="tab" onclick="switchTab('week')">НЕДЕЛЯ</div>
+</div>
+
+<div class="container">
+    <div id="loading" class="loading">ЗАГРУЗКА...</div>
+    <div id="bookings-list"></div>
+</div>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    let currentTab = 'today';
+    let barberName = null;
+    let allBookings = [];
+
+    async function init() {
+        const userId = tg.initDataUnsafe?.user?.id;
+        if (!userId) {
+            document.getElementById('bookings-list').innerHTML = '<div class="loading">Ошибка: Запустите через Telegram</div>';
+            return;
+        }
+        
+        // Auth check
+        try {
+            const res = await fetch(`/barber/auth?telegram_id=${userId}`);
+            const data = await res.json();
+            
+            if (data.error) {
+                document.body.innerHTML = `<div class="loading" style="color:red">⛔️ ${data.error}</div>`;
+                return;
+            }
+            
+            barberName = data.name;
+            document.getElementById('barber-name').innerText = barberName;
+            
+            fetchBookings();
+        } catch (e) {
+            console.error(e);
+            document.getElementById('loading').innerText = "ОШИБКА СЕТИ";
+        }
+    }
+
+    async function fetchBookings() {
+        document.getElementById('loading').classList.remove('hidden');
+        document.getElementById('bookings-list').innerHTML = '';
+        
+        try {
+            const res = await fetch(`/barber/bookings?name=${encodeURIComponent(barberName)}&scope=${currentTab}`);
+            const data = await res.json();
+            allBookings = data;
+            renderList(data);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            document.getElementById('loading').classList.add('hidden');
+        }
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        fetchBookings();
+    }
+
+    function renderList(bookings) {
+        const container = document.getElementById('bookings-list');
+        container.innerHTML = '';
+        
+        if (bookings.length === 0) {
+            container.innerHTML = '<div class="loading">Записей нет 🎉</div>';
+            return;
+        }
+
+        bookings.forEach(b => {
+            const el = document.createElement('div');
+            el.className = `booking-card ${b.status === 'done' ? 'done' : ''}`;
+            
+            const isDone = b.status === 'done';
+            
+            let actionsHtml = '';
+            if (b.status === 'new') {
+                actionsHtml = `
+                    <div class="actions">
+                        <button class="btn btn-cancel" onclick="updateStatus('${b.id}', 'cancelled')">Отменить</button>
+                        <button class="btn btn-done" onclick="updateStatus('${b.id}', 'done')">✓ Выполнено</button>
+                    </div>
+                `;
+            } else if (isDone) {
+                actionsHtml = `<div class="status-label" style="color: var(--success)">ВЫПОЛНЕНО</div>`;
+            }
+
+            // Date header if needed (for week view)
+            let dateHeader = '';
+            if (currentTab === 'week') {
+                dateHeader = `<div style="font-size: 10px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase;">${b.date}</div>`;
+            }
+
+            el.innerHTML = `
+                ${dateHeader}
+                <div class="card-header">
+                    <span class="time-badge">${b.time}</span>
+                    <span class="price-tag">${b.price}₸</span>
+                </div>
+                
+                <div class="service-title">${b.service}</div>
+                <div class="client-info">Клиент ID: <span style="font-family: monospace">${b.telegram_id}</span></div>
+                
+                ${actionsHtml}
+            `;
+            container.appendChild(el);
+        });
+    }
+
+    async function updateStatus(id, status) {
+        if (status === 'cancelled' && !confirm("Отменить запись и уведомить клиента?")) return;
+        
+        try {
+            await fetch(`/barber/bookings/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: status })
+            });
+            fetchBookings(); // Refresh
+        } catch(e) {
+            alert("Ошибка обновления");
+        }
+    }
+
+    init();
+    
+    // Auto refresh
+    setInterval(() => {
+        if (barberName) fetchBookings();
+    }, 30000);
+
+</script>
+</body>
+</html>

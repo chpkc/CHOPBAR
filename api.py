@@ -99,6 +99,11 @@ async def read_admin():
     with open("static/admin.html", "r", encoding="utf-8") as f:
         return f.read()
 
+@app.get("/barber", response_class=HTMLResponse)
+async def read_barber():
+    with open("static/barber.html", "r", encoding="utf-8") as f:
+        return f.read()
+
 # --- ENDPOINTS ---
 
 @app.post("/chat")
@@ -232,6 +237,50 @@ async def delete_booking(booking_id: str):
             return JSONResponse(status_code=500, content={"error": str(e)})
     else:
         return JSONResponse(status_code=503, content={"error": "Database not configured"})
+
+# --- BARBER API ---
+@app.get("/barber/auth")
+async def barber_auth(telegram_id: str):
+    if not supabase: return {"error": "DB error"}
+    try:
+        res = supabase.table('barbers').select('*').eq('telegram_id', telegram_id).execute()
+        if res.data:
+            return res.data[0]
+        else:
+            return {"error": "Barber not found"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/barber/bookings")
+async def get_barber_bookings(name: str, scope: str = 'today'):
+    if not supabase: return []
+    try:
+        today = datetime.datetime.now().date()
+        query = supabase.table('bookings').select('*').eq('master', name).neq('status', 'cancelled')
+        
+        if scope == 'today':
+            query = query.eq('date', today.isoformat())
+        elif scope == 'week':
+            end_date = today + datetime.timedelta(days=7)
+            query = query.gte('date', today.isoformat()).lte('date', end_date.isoformat())
+            
+        res = query.order('date').order('time').execute()
+        return res.data
+    except Exception as e:
+        print(e)
+        return []
+
+class StatusUpdate(BaseModel):
+    status: str
+
+@app.post("/barber/bookings/{id}")
+async def update_booking_status(id: str, update: StatusUpdate):
+    if not supabase: return {"error": "DB error"}
+    try:
+        supabase.table('bookings').update({'status': update.status}).eq('id', id).execute()
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
