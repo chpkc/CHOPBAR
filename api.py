@@ -42,6 +42,8 @@ app.add_middleware(
 )
 
 # --- MODELS ---
+import uuid
+
 class ChatRequest(BaseModel):
     messages: list
     telegram_id: str
@@ -124,6 +126,9 @@ async def chat(request: ChatRequest):
 @app.post("/booking")
 async def create_booking(booking: BookingModel):
     booking_data = booking.dict()
+    
+    # Generate UUID for the booking
+    booking_data["id"] = str(uuid.uuid4())
     
     if supabase:
         try:
