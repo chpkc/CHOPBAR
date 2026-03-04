@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHOP BAR. ADMIN</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Unbounded:wght@400;500;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #F9F4EA;
+            --primary-dark: #1A1208;
+            --accent-gold: #D4A853;
+            --text-muted: #8A7A5E;
+            --divider-color: #E8DFC8;
+            --card-bg: #F5EDD6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-dark);
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: var(--primary-dark);
+            color: white;
+            padding: 24px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-family: 'Unbounded', sans-serif;
+            font-weight: 900;
+            font-size: 24px;
+            margin: 0;
+            letter-spacing: -0.02em;
+        }
+
+        .total-count {
+            font-family: 'Unbounded', sans-serif;
+            color: var(--accent-gold);
+            font-size: 14px;
+        }
+
+        .container {
+            padding: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        th {
+            text-align: left;
+            padding: 16px 24px;
+            font-family: 'Unbounded', sans-serif;
+            font-size: 12px;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--divider-color);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--divider-color);
+            font-size: 14px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-family: 'Unbounded', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .status-new {
+            background-color: var(--accent-gold);
+            color: var(--primary-dark);
+        }
+
+        .status-cancelled {
+            background-color: #E8DFC8;
+            color: var(--text-muted);
+            text-decoration: line-through;
+        }
+
+        .refresh-bar {
+            height: 2px;
+            background-color: var(--accent-gold);
+            width: 0%;
+            transition: width 1s linear;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+<div class="refresh-bar" id="refresh-bar"></div>
+
+<header>
+    <h1>CHOP BAR. ADMIN</h1>
+    <span class="total-count" id="total-count">Всего записей: ...</span>
+</header>
+
+<div class="container">
+    <table id="bookings-table">
+        <thead>
+            <tr>
+                <th>Дата</th>
+                <th>Время</th>
+                <th>Мастер</th>
+                <th>Услуга</th>
+                <th>Цена</th>
+                <th>Клиент (ID)</th>
+                <th>Статус</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Rows injected via JS -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const tableBody = document.querySelector('#bookings-table tbody');
+    const totalCountEl = document.getElementById('total-count');
+    const refreshBar = document.getElementById('refresh-bar');
+
+    async function fetchBookings() {
+        // Animate refresh bar
+        refreshBar.style.width = '0%';
+        refreshBar.style.transition = 'none';
+        requestAnimationFrame(() => {
+            refreshBar.style.transition = 'width 1s linear';
+            refreshBar.style.width = '100%';
+        });
+
+        try {
+            const res = await fetch('/bookings');
+            const data = await res.json();
+            renderTable(data);
+        } catch (e) {
+            console.error("Fetch error", e);
+        }
+    }
+
+    function renderTable(data) {
+        tableBody.innerHTML = '';
+        totalCountEl.textContent = `Всего записей: ${data.length}`;
+
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            
+            // Format status
+            const statusClass = row.status === 'cancelled' ? 'status-cancelled' : 'status-new';
+            const statusText = row.status === 'cancelled' ? 'ОТМЕНЕНО' : 'НОВАЯ';
+
+            tr.innerHTML = `
+                <td>${row.date}</td>
+                <td>${row.time}</td>
+                <td><strong>${row.master}</strong></td>
+                <td>${row.service}</td>
+                <td style="color: #D4A853; font-weight: bold;">${row.price}₸</td>
+                <td style="font-family: monospace; color: #8A7A5E;">${row.telegram_id}</td>
+                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+            `;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    // Initial load
+    fetchBookings();
+
+    // Auto refresh every 10s
+    setInterval(fetchBookings, 10000);
+</script>
+
+</body>
+</html>

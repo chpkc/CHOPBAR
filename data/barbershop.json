@@ -1,0 +1,36 @@
+{
+  "barbers": [
+    {
+      "name": "Alex",
+      "specialty": "Senior Barber",
+      "experience": "5 years"
+    },
+    {
+      "name": "Jordan",
+      "specialty": "Barber",
+      "experience": "2 years"
+    }
+  ],
+  "services": [
+    {
+      "name": "Haircut",
+      "price": 30,
+      "duration_minutes": 45
+    },
+    {
+      "name": "Beard Trim",
+      "price": 20,
+      "duration_minutes": 30
+    },
+    {
+      "name": "Full Package",
+      "price": 45,
+      "duration_minutes": 60
+    }
+  ],
+  "hours": {
+    "monday_friday": "10:00 - 20:00",
+    "saturday": "10:00 - 18:00",
+    "sunday": "Closed"
+  }
+}
