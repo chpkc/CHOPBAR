@@ -10,6 +10,7 @@ load_dotenv()
 # --- CONFIGURATION ---
 ADMIN_BOT_TOKEN = os.getenv("ADMIN_BOT_TOKEN")
 MINI_APP_URL = os.getenv("MINI_APP_URL")
+ADMIN_IDS = [int(id.strip()) for id in os.getenv("ADMIN_IDS", "").split(",") if id.strip()]
 
 # --- LOGGING ---
 logging.basicConfig(
@@ -19,6 +20,12 @@ logger = logging.getLogger(__name__)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Sends a message with a button that opens the admin web app."""
+    
+    # Check Admin ID
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("⛔️ Доступ запрещен. Вы не являетесь администратором.")
+        return
     
     # Check config
     if not ADMIN_BOT_TOKEN:
