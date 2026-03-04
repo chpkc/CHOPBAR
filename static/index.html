@@ -1459,8 +1459,22 @@
                 tg.MainButton.onClick(() => tg.close());
             } else {
                 // Show specific error from backend if available
-                const errorMsg = result.details || result.error || "Неизвестная ошибка";
-                alert(`Ошибка при сохранении: ${errorMsg}`);
+                let errorMsg = result.details || result.error;
+                
+                // Handle FastAPI validation errors (detail is usually a list)
+                if (!errorMsg && result.detail) {
+                    if (Array.isArray(result.detail)) {
+                        errorMsg = result.detail.map(e => `${e.loc.join('.')}: ${e.msg}`).join('\n');
+                    } else {
+                        errorMsg = result.detail;
+                    }
+                }
+                
+                if (!errorMsg) {
+                    errorMsg = "Неизвестная ошибка: " + JSON.stringify(result);
+                }
+                
+                alert(`Ошибка при сохранении:\n${errorMsg}`);
                 console.error("Booking error:", result);
             }
 
