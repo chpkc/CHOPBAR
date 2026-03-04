@@ -6,3 +6,4 @@ python-telegram-bot
 streamlit
 supabase
 apscheduler
+aiohttp
