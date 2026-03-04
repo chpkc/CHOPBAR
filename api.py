@@ -440,19 +440,35 @@ async def barber_auth(telegram_id: str):
 async def get_barber_bookings(name: str, scope: str = 'today'):
     if not supabase: return []
     try:
-        today = datetime.datetime.now().date()
-        query = supabase.table('bookings').select('*').eq('master', name).neq('status', 'cancelled')
+        # Get today's date
+        today_date = datetime.date.today()
+        today_str = today_date.isoformat()
+        
+        print(f"Fetching bookings for master: '{name}', scope: {scope}, date: {today_str}")
+
+        # Start query
+        query = supabase.table('bookings').select('*')
+        
+        # Apply filters step-by-step
+        query = query.eq('master', name)
+        query = query.neq('status', 'cancelled')
         
         if scope == 'today':
-            query = query.eq('date', today.isoformat())
+            query = query.eq('date', today_str)
         elif scope == 'week':
-            end_date = today + datetime.timedelta(days=7)
-            query = query.gte('date', today.isoformat()).lte('date', end_date.isoformat())
+            end_date = (today_date + datetime.timedelta(days=7)).isoformat()
+            # For week view, we want >= today AND <= today+7
+            query = query.gte('date', today_str).lte('date', end_date)
+        elif scope == 'all':
+            # No date filter, just show all active bookings
+            pass
             
         res = query.order('date').order('time').execute()
+        
+        print(f"Found {len(res.data)} bookings")
         return res.data
     except Exception as e:
-        print(e)
+        print(f"Error fetching barber bookings: {e}")
         return []
 
 class StatusUpdate(BaseModel):

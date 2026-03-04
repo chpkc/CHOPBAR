@@ -204,6 +204,7 @@
 <div class="tabs">
     <div class="tab active" onclick="switchTab('today')">СЕГОДНЯ</div>
     <div class="tab" onclick="switchTab('week')">НЕДЕЛЯ</div>
+    <div class="tab" onclick="switchTab('all')">ВСЕ</div>
 </div>
 
 <div class="container">
@@ -237,7 +238,7 @@
                 return;
             }
             
-            barberName = data.name;
+            barberName = data.name.trim(); // Ensure no trailing spaces
             document.getElementById('barber-name').innerText = barberName;
             
             fetchBookings();
