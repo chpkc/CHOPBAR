@@ -15,10 +15,3 @@ Run the script to see the generated prompt:
 ```bash
 python3 main.py
 ```
-
-## Next Steps
-
-To make this a fully functional bot, you can:
-1.  Integrate with an LLM API (OpenAI, Anthropic, etc.).
-2.  Build a frontend (Web, Telegram, CLI).
-3.  Implement the booking confirmation logic (parsing the `<<<BOOKING: ...>>>` output).
