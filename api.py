@@ -96,39 +96,6 @@ async def read_admin():
     with open("static/admin.html", "r", encoding="utf-8") as f:
         return f.read()
 
-# --- BOOKING LOGIC ---
-
-def save_booking_local(booking_data: dict):
-    file_path = "data/bookings.json"
-    new_booking = {
-        "id": str(datetime.datetime.now().timestamp()), # Simple ID for local
-        **booking_data,
-        "status": "new",
-        "created_at": datetime.datetime.now().isoformat()
-    }
-    
-    try:
-        if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-            with open(file_path, "r+", encoding="utf-8") as f:
-                bookings = json.load(f)
-                bookings.append(new_booking)
-                f.seek(0)
-                json.dump(bookings, f, indent=4)
-        else:
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump([new_booking], f, indent=4)
-        return new_booking
-    except Exception as e:
-        print(f"Error saving booking locally: {e}")
-        return None
-
-def get_bookings_local():
-    file_path = "data/bookings.json"
-    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-        with open(file_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
-
 # --- ENDPOINTS ---
 
 @app.post("/chat")
@@ -161,15 +128,13 @@ async def create_booking(booking: BookingModel):
     if supabase:
         try:
             response = supabase.table("bookings").insert(booking_data).execute()
+            # If successful, return the data from DB
             return {"status": "success", "data": response.data[0]}
         except Exception as e:
             print(f"Supabase error: {e}")
-            # Fallback to local? Maybe not for production, but for dev yes.
-            saved = save_booking_local(booking_data)
-            return {"status": "success", "data": saved, "source": "local_fallback"}
+            return JSONResponse(status_code=500, content={"error": "Database error", "details": str(e)})
     else:
-        saved = save_booking_local(booking_data)
-        return {"status": "success", "data": saved, "source": "local"}
+        return JSONResponse(status_code=503, content={"error": "Database not configured"})
 
 @app.get("/bookings")
 async def get_bookings():
@@ -179,24 +144,24 @@ async def get_bookings():
             return response.data
         except Exception as e:
             print(f"Supabase fetch error: {e}")
-            return get_bookings_local()
+            return JSONResponse(status_code=500, content={"error": str(e)})
     else:
-        return get_bookings_local()
+        return []
 
 @app.delete("/bookings/{booking_id}")
 async def delete_booking(booking_id: str):
     if supabase:
         try:
-            # Soft delete
+            # Soft delete or hard delete? Let's do hard delete for now or update status
+            # admin_app.py filters by status, so maybe soft delete is better if we have a 'cancelled' status
+            # But the previous code did soft delete. Let's stick to that.
             response = supabase.table("bookings").update({"status": "cancelled"}).eq("id", booking_id).execute()
             return {"status": "cancelled"}
         except Exception as e:
             print(f"Supabase delete error: {e}")
             return {"error": str(e)}
     else:
-        # Local soft delete (not fully implemented for local JSON to keep it simple, but we can try)
-        # For local dev, we just pretend it worked
-        return {"status": "cancelled", "note": "Local delete simulated"}
+        return {"error": "Database not configured"}
 
 if __name__ == "__main__":
     import uvicorn

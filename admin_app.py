@@ -1,8 +1,24 @@
 import streamlit as st
-import json
 import pandas as pd
 from datetime import datetime
 import os
+from supabase import create_client, Client
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+# Initialize Supabase
+@st.cache_resource
+def init_supabase():
+    if SUPABASE_URL and SUPABASE_KEY:
+        return create_client(SUPABASE_URL, SUPABASE_KEY)
+    return None
+
+supabase = init_supabase()
 
 # Page config
 st.set_page_config(
@@ -16,12 +32,19 @@ st.title("✂️ CHOPBAR - Admin Dashboard")
 
 # Function to load data
 def load_data():
-    if os.path.exists('data/bookings.json'):
-        with open('data/bookings.json', 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return []
+    if supabase:
+        try:
+            response = supabase.table("bookings").select("*").order("created_at", desc=True).execute()
+            return response.data
+        except Exception as e:
+            st.error(f"Error fetching data from Supabase: {e}")
+            return []
+    else:
+        st.error("Supabase credentials not found in .env")
+        return []
 
 def load_barbershop_data():
+    import json
     if os.path.exists('data/barbershop.json'):
         with open('data/barbershop.json', 'r', encoding='utf-8') as f:
             return json.load(f)
