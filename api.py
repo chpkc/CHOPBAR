@@ -69,7 +69,7 @@ def get_formatted_system_prompt():
     prompt_template = load_system_prompt()
 
     barbers_str = "\n".join([f"- {b['name']} ({b['specialty']}, {b['experience']})" for b in data['barbers']])
-    services_str = "\n".join([f"- {s['name']}: ${s['price']} ({s['duration_minutes']} min)" for s in data['services']])
+    services_str = "\n".join([f"- {s['name']}: {s['price']} ₸ ({s['duration_minutes']} min)" for s in data['services']])
     hours_list = []
     for day, hours in data['hours'].items():
         day_formatted = day.replace('_', '-').title()

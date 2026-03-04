@@ -3,3 +3,6 @@ uvicorn
 anthropic
 python-dotenv
 python-telegram-bot
+streamlit
+supabase
+apscheduler

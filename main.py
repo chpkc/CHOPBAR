@@ -14,7 +14,7 @@ def format_prompt(prompt_template, data):
     barbers_str = "\n".join([f"- {b['name']} ({b['specialty']}, {b['experience']})" for b in data['barbers']])
     
     # Format services list
-    services_str = "\n".join([f"- {s['name']}: ${s['price']} ({s['duration_minutes']} min)" for s in data['services']])
+    services_str = "\n".join([f"- {s['name']}: {s['price']} ₸ ({s['duration_minutes']} min)" for s in data['services']])
     
     # Format hours
     hours_list = []

@@ -15,3 +15,11 @@ Run the script to see the generated prompt:
 ```bash
 python3 main.py
 ```
+
+### Admin Panel
+
+To launch the admin dashboard:
+
+```bash
+streamlit run admin_app.py
+```
