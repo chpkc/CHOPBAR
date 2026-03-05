@@ -162,12 +162,20 @@
             position: sticky;
             top: 105px; /* Adjust based on header height */
             z-index: 90;
+            overflow-x: auto; /* Enable horizontal scrolling */
+            white-space: nowrap; /* Prevent wrapping */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            scrollbar-width: none; /* Hide scrollbar Firefox */
+        }
+        
+        .tabs::-webkit-scrollbar {
+            display: none; /* Hide scrollbar Chrome/Safari */
         }
 
         .tab {
-            flex: 1;
+            flex: 0 0 auto; /* Do not shrink or grow, take content width */
             text-align: center;
-            padding: 16px;
+            padding: 16px 20px; /* Add more horizontal padding for touch targets */
             font-family: 'Unbounded', sans-serif;
             font-size: 11px;
             font-weight: 700;
