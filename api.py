@@ -157,6 +157,8 @@ async def create_barber(barber: BarberCreate):
     
     try:
         data = barber.dict(exclude_none=True)
+        if 'name' in data:
+            data['name'] = data['name'].strip()
         response = supabase.table("barbers").insert(data).execute()
         new_barber = response.data[0]
         
@@ -440,6 +442,9 @@ async def barber_auth(telegram_id: str):
 async def get_barber_bookings(name: str, scope: str = 'today'):
     if not supabase: return []
     try:
+        # Normalize name
+        name = name.strip()
+        
         # Get today's date
         today_date = datetime.date.today()
         today_str = today_date.isoformat()
