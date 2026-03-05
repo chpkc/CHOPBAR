@@ -847,6 +847,49 @@
             font-weight: 700;
             color: #ffffff;
         }
+
+        /* --- INSTAGRAM BUTTON --- */
+        .insta-btn {
+            background-color: var(--primary-dark);
+            color: #ffffff;
+            border: 1px solid var(--accent-gold);
+            padding: 20px;
+            margin: 20px 20px 0; /* Match layout spacing */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: transform 200ms ease, background-color 200ms ease;
+        }
+
+        .insta-btn:active {
+            transform: scale(0.98);
+            background-color: #2a2015;
+        }
+
+        .insta-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .insta-title {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+            letter-spacing: 0.05em;
+        }
+
+        .insta-subtitle {
+            font-size: 12px;
+            color: var(--accent-gold);
+        }
+
+        .insta-icon {
+            font-size: 24px;
+            color: var(--accent-gold);
+        }
     </style>
 </head>
 <body>
@@ -905,6 +948,15 @@
                 <!-- Populated via JS -->
             </div>
             
+            <!-- INSTAGRAM BUTTON -->
+            <div class="insta-btn stagger-item" onclick="window.open('https://instagram.com/chopbar.pvl', '_blank')">
+                <div class="insta-text">
+                    <span class="insta-title">НАШИ РАБОТЫ</span>
+                    <span class="insta-subtitle">Смотри примеры в Instagram ↗</span>
+                </div>
+                <div class="insta-icon">📷</div>
+            </div>
+
             <div class="section-header" style="margin-top: 20px;">
                 <span class="section-title">Услуги</span>
                 <div class="section-line"></div>
@@ -1082,7 +1134,7 @@
         await Promise.all([loadBarbers(), loadServices()]);
 
         renderBarberList('masters-preview-list', barbers, false);
-        // renderServicesGrid('services-preview-list', services, false); // Maybe limit to top 3?
+        renderServicesGrid('services-preview-list', services, false); 
         
         renderBarberList('masters-list', barbers, true);
         renderServicesGrid('services-list', services, true);
