@@ -1153,10 +1153,18 @@
     
     async function deleteBarber(id) {
         if(!confirm('Удалить мастера? Это действие нельзя отменить.')) return;
-        // Note: DELETE endpoint for barbers needs to be implemented in API or handled via Supabase direct call if not present.
-        // Assuming we might not have a DELETE endpoint in api.py yet based on previous context, 
-        // but let's try assuming standard REST or show alert.
-        alert("Функция удаления пока не настроена на сервере.");
+        
+        try {
+            const res = await fetch(`/barbers/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                fetchBarbers();
+            } else {
+                const data = await res.json();
+                alert(data.error || "Ошибка удаления");
+            }
+        } catch (e) {
+            alert("Ошибка сети: " + e);
+        }
     }
     
     // --- BOOKING MANUAL ADD LOGIC ---

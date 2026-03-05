@@ -27,6 +27,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 BOT_TOKEN = os.getenv("BOT_TOKEN") # Client Bot
 ADMIN_BOT_TOKEN = os.getenv("ADMIN_BOT_TOKEN") # Admin Bot
+BARBER_BOT_TOKEN = os.getenv("BARBER_BOT_TOKEN") or ADMIN_BOT_TOKEN # Barber Bot (fallback to Admin)
 ADMIN_IDS = [int(id.strip()) for id in os.getenv("ADMIN_IDS", "").split(",") if id.strip()]
 
 # --- SUPABASE CLIENT ---
@@ -342,10 +343,10 @@ async def create_booking(booking: BookingModel):
         if master.data and master.data[0].get('telegram_id'):
               master_tg = master.data[0]['telegram_id']
               text = f"📅 Новая запись!\nУслуга: {booking.service}\nДата: {booking.date}\nВремя: {booking.time}\nКлиент ID: {booking.telegram_id}"
-              # Send to BARBER bot, not client bot
-              await send_telegram_message(BARBER_BOT_TOKEN, master_tg, text)
+              # Send to BARBER bot
+              await send_telegram_message(ADMIN_BOT_TOKEN, master_tg, text) # Using ADMIN_BOT_TOKEN as BARBER_BOT_TOKEN fallback
 
-        return {"success": True, "booking": res.data[0]}
+        return {"status": "success", "data": res.data[0]}
     except Exception as e:
         print(f"Error creating booking: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
@@ -497,30 +498,87 @@ async def get_services(master_id: Optional[str] = None):
 
 @app.post("/services")
 async def create_service(service: ServiceCreate):
-    if not supabase: return {"error": "DB not connected"}
+    data = service.dict()
+    # Try DB first
+    if supabase:
+        try:
+            res = supabase.table("services").insert(data).execute()
+            return res.data[0]
+        except Exception as e:
+            print(f"DB Error (create_service), falling back to JSON: {e}")
+
+    # Fallback to JSON
     try:
-        data = service.dict()
-        res = supabase.table("services").insert(data).execute()
-        return res.data[0]
+        current_data = load_barbershop_data()
+        # Find max ID. If IDs are UUIDs in DB but ints in JSON, this is tricky.
+        # Assuming JSON uses ints for now as per load_barbershop_data
+        # But if DB uses UUIDs, we have a mix.
+        # Let's generate a random int ID to be safe for JSON
+        import random
+        new_id = random.randint(1000, 99999)
+        data['id'] = new_id
+        current_data['services'].append(data)
+        with open("data/barbershop.json", "w", encoding="utf-8") as f:
+            json.dump(current_data, f, ensure_ascii=False, indent=2)
+        return data
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.put("/services/{id}")
 async def update_service(id: int, service: ServiceUpdate):
-    if not supabase: return {"error": "DB not connected"}
+    data = {k: v for k, v in service.dict().items() if v is not None}
+    
+    # Try DB first
+    if supabase:
+        try:
+            res = supabase.table("services").update(data).eq("id", id).execute()
+            if res.data:
+                return res.data[0]
+        except Exception as e:
+            print(f"DB Error (update_service), falling back to JSON: {e}")
+            
+    # Fallback to JSON
     try:
-        data = {k: v for k, v in service.dict().items() if v is not None}
-        res = supabase.table("services").update(data).eq("id", id).execute()
-        return res.data
+        current_data = load_barbershop_data()
+        found = False
+        for s in current_data['services']:
+            if str(s.get('id')) == str(id):
+                s.update(data)
+                found = True
+                break
+        
+        if found:
+            with open("data/barbershop.json", "w", encoding="utf-8") as f:
+                json.dump(current_data, f, ensure_ascii=False, indent=2)
+            return {"status": "updated", "id": id}
+        else:
+            return JSONResponse(status_code=404, content={"error": "Service not found in local JSON"})
+            
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.delete("/services/{id}")
 async def delete_service(id: int):
-    if not supabase: return {"error": "DB not connected"}
+    # Try DB first
+    if supabase:
+        try:
+            supabase.table("services").delete().eq("id", id).execute()
+        except Exception as e:
+            print(f"DB Error (delete_service), falling back to JSON: {e}")
+
+    # Fallback to JSON
     try:
-        supabase.table("services").delete().eq("id", id).execute()
-        return {"success": True}
+        current_data = load_barbershop_data()
+        original_len = len(current_data['services'])
+        current_data['services'] = [s for s in current_data['services'] if str(s.get('id')) != str(id)]
+        
+        if len(current_data['services']) < original_len:
+            with open("data/barbershop.json", "w", encoding="utf-8") as f:
+                json.dump(current_data, f, ensure_ascii=False, indent=2)
+            return {"success": True}
+        else:
+            return {"success": False, "error": "Service not found in JSON"}
+            
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
