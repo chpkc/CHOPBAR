@@ -183,7 +183,7 @@
 
         /* BOOKING LIST - NEWSPAPER STYLE */
         .bookings-list {
-            padding-bottom: 40px;
+            padding-bottom: 80px; /* More space for FAB */
         }
 
         .booking-row {
@@ -200,7 +200,7 @@
         .date-strip {
             background-color: var(--primary-dark);
             color: white;
-            padding: 10px 16px;
+            padding: 8px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -213,7 +213,7 @@
         .date-text {
             font-family: 'Unbounded', sans-serif;
             font-weight: 700;
-            font-size: 12px;
+            font-size: 11px;
             color: var(--accent-gold);
             text-transform: uppercase;
         }
@@ -225,7 +225,7 @@
         .price-text {
             font-family: 'Unbounded', sans-serif;
             font-weight: 900;
-            font-size: 16px;
+            font-size: 14px;
             color: white;
         }
         
@@ -244,13 +244,13 @@
         .info-row {
             display: flex;
             align-items: center;
-            padding: 12px 16px;
+            padding: 10px 16px;
             border-bottom: 1px solid var(--divider-color);
             background-color: #FFFFFF;
         }
         
         .info-row:nth-child(even) {
-            background-color: #F9F4EA;
+            background-color: #FFFFFF; /* Keep white for cleaner look */
         }
         
         .status-cancelled .info-row {
@@ -261,15 +261,16 @@
             width: 80px;
             flex-shrink: 0;
             font-family: 'Unbounded', sans-serif;
-            font-size: 10px;
+            font-size: 9px;
             text-transform: uppercase;
             color: var(--text-muted);
+            letter-spacing: 0.05em;
         }
 
         .value {
             font-family: 'Inter', sans-serif;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
             color: var(--primary-dark);
             flex-grow: 1;
         }
@@ -280,15 +281,15 @@
             font-family: 'Unbounded', sans-serif;
             font-weight: 700;
             font-size: 10px;
-            padding: 3px 10px;
+            padding: 2px 8px;
             display: inline-block;
         }
 
         .action-row {
             display: flex;
             justify-content: flex-end;
-            padding: 12px 16px;
-            background-color: #FFFFFF;
+            padding: 10px 16px;
+            background-color: #F9F4EA;
             border-bottom: 3px solid var(--bg-color); /* Spacer */
         }
         
@@ -301,16 +302,41 @@
             border: 1px solid var(--divider-color);
             color: var(--text-muted);
             font-family: 'Unbounded', sans-serif;
-            font-size: 10px;
+            font-size: 9px;
             text-transform: uppercase;
-            padding: 8px 12px;
+            padding: 6px 12px;
             cursor: pointer;
             transition: all 0.2s;
+            letter-spacing: 0.05em;
         }
 
         .btn-cancel:hover {
             border-color: #8B3A1A;
             color: #8B3A1A;
+        }
+
+        /* FAB - ADD BUTTON */
+        .fab-add {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--primary-dark);
+            color: var(--accent-gold);
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 300;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            cursor: pointer;
+            z-index: 150;
+            transition: transform 0.2s;
+        }
+        
+        .fab-add:active {
+            transform: scale(0.95);
         }
 
         /* BARBERS LIST */
@@ -592,6 +618,8 @@
     <button class="btn-add" onclick="showAddBarberForm()">+ Добавить мастера</button>
 </div>
 
+<div class="fab-add" onclick="showAddBookingModal()">+</div>
+
 <!-- Modal for Add/Edit Barber -->
 <div id="barber-modal" class="modal hidden">
     <div class="modal-content">
@@ -621,6 +649,48 @@
         <div class="form-actions">
             <button class="btn-modal btn-close" onclick="closeModal()">Отмена</button>
             <button class="btn-modal btn-save" onclick="saveBarber()">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Add Booking -->
+<div id="booking-modal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-title">НОВАЯ ЗАПИСЬ</div>
+        
+        <div class="form-group">
+            <label class="form-label">Мастер</label>
+            <select id="booking-master-input" class="form-input"></select>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Услуга</label>
+            <input type="text" id="booking-service-input" class="form-input" placeholder="Например: Стрижка">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Дата</label>
+            <input type="date" id="booking-date-input" class="form-input">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Время</label>
+            <input type="time" id="booking-time-input" class="form-input">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Цена (₸)</label>
+            <input type="number" id="booking-price-input" class="form-input" placeholder="1200">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Имя клиента</label>
+            <input type="text" id="booking-client-input" class="form-input" placeholder="Имя">
+        </div>
+        
+        <div class="form-actions">
+            <button class="btn-modal btn-close" onclick="closeBookingModal()">Отмена</button>
+            <button class="btn-modal btn-save" onclick="saveBooking()">Создать</button>
         </div>
     </div>
 </div>
@@ -891,6 +961,69 @@
         // Assuming we might not have a DELETE endpoint in api.py yet based on previous context, 
         // but let's try assuming standard REST or show alert.
         alert("Функция удаления пока не настроена на сервере.");
+    }
+    
+    // --- BOOKING MANUAL ADD LOGIC ---
+    function showAddBookingModal() {
+        // Populate masters select
+        const select = document.getElementById('booking-master-input');
+        select.innerHTML = '';
+        barbersData.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b.name;
+            opt.innerText = b.name;
+            select.appendChild(opt);
+        });
+        
+        // Set default date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('booking-date-input').value = today;
+        
+        // Reset fields
+        document.getElementById('booking-service-input').value = '';
+        document.getElementById('booking-time-input').value = '';
+        document.getElementById('booking-price-input').value = '';
+        document.getElementById('booking-client-input').value = '';
+        
+        document.getElementById('booking-modal').classList.remove('hidden');
+    }
+    
+    function closeBookingModal() {
+        document.getElementById('booking-modal').classList.add('hidden');
+    }
+    
+    async function saveBooking() {
+        const data = {
+            master: document.getElementById('booking-master-input').value,
+            service: document.getElementById('booking-service-input').value,
+            date: document.getElementById('booking-date-input').value,
+            time: document.getElementById('booking-time-input').value,
+            price: parseInt(document.getElementById('booking-price-input').value),
+            duration: 45, // Default
+            telegram_id: document.getElementById('booking-client-input').value // Using client name as ID for manual entry or just string
+        };
+        
+        if (!data.master || !data.service || !data.date || !data.time || !data.price || !data.telegram_id) {
+            alert("Заполните все поля");
+            return;
+        }
+        
+        try {
+            const res = await fetch('/booking', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            
+            if (res.ok) {
+                closeBookingModal();
+                fetchBookings();
+            } else {
+                alert("Ошибка создания записи");
+            }
+        } catch (e) {
+            alert("Ошибка сети: " + e);
+        }
     }
 
     init();
