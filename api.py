@@ -28,6 +28,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 BOT_TOKEN = os.getenv("BOT_TOKEN") # Client Bot
 ADMIN_BOT_TOKEN = os.getenv("ADMIN_BOT_TOKEN") # Admin Bot
 BARBER_BOT_TOKEN = os.getenv("BARBER_BOT_TOKEN") or ADMIN_BOT_TOKEN # Barber Bot (fallback to Admin)
+MINI_APP_URL = os.getenv("MINI_APP_URL")
 ADMIN_IDS = [int(id.strip()) for id in os.getenv("ADMIN_IDS", "").split(",") if id.strip()]
 
 # --- SUPABASE CLIENT ---
@@ -96,16 +97,38 @@ class ServiceUpdate(BaseModel):
     master_id: Optional[str] = None
 
 # --- NOTIFICATION HELPERS ---
-async def send_telegram_message(token: str, chat_id: Union[str, int], text: str):
+async def send_telegram_message(token: str, chat_id: Union[str, int], text: str, reply_markup: Optional[dict] = None):
     if not token or not chat_id:
+        print("DEBUG: Missing token or chat_id for telegram message")
         return
+        
     url = f"https://api.telegram.org/bot{token}/sendMessage"
+    
+    # Ensure chat_id is int if it looks like one, though API accepts string too.
+    # But sometimes string with spaces causes issues.
+    try:
+        chat_id = int(str(chat_id).strip())
+    except ValueError:
+        pass # Keep as string if not int (e.g. channel username)
+
     payload = {"chat_id": chat_id, "text": text}
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+    
+    # Debug payload content before sending
+    import json
+    print(f"DEBUG: Sending to {url} | payload: {json.dumps(payload, ensure_ascii=False)}")
+
     async with aiohttp.ClientSession() as session:
         try:
             async with session.post(url, json=payload) as resp:
-                if resp.status != 200:
-                    print(f"Failed to send message: {await resp.text()}")
+                response_text = await resp.text()
+                print(f"DEBUG: Telegram API Response: {resp.status} | {response_text}")
+                
+                if resp.status == 403:
+                    print(f"User {chat_id} blocked the bot (403 Forbidden).")
+                elif resp.status != 200:
+                    print(f"Failed to send message: {response_text}")
         except Exception as e:
             print(f"Error sending telegram message: {e}")
 
@@ -344,6 +367,19 @@ async def create_booking(booking: BookingModel):
                 # Better to fail here if we can't parse.
                 pass
 
+        # RACE CONDITION CHECK: Check if slot is already occupied
+        # We check for same master, date, time, and status != 'cancelled'
+        existing = supabase.table('bookings')\
+            .select('id')\
+            .eq('master', booking.master)\
+            .eq('date', booking.date)\
+            .eq('time', booking.time)\
+            .neq('status', 'cancelled')\
+            .execute()
+            
+        if existing.data:
+            return JSONResponse(status_code=409, content={"error": "Это время уже занято. Пожалуйста, выберите другое."})
+
         data = booking.dict(exclude={'force'}) # Exclude force from DB insert
         data['id'] = str(uuid.uuid4())
         data['status'] = 'new'
@@ -465,15 +501,7 @@ async def get_active_booking(telegram_id: str):
         print(f"Error fetching active booking: {e}")
         return {"error": str(e)}
 
-@app.patch("/bookings/{booking_id}/done")
-async def mark_booking_done(booking_id: str):
-    if not supabase: return {"error": "DB error"}
-    try:
-        response = supabase.table("bookings").update({"status": "done"}).eq("id", booking_id).execute()
-        return {"status": "done", "id": booking_id}
-    except Exception as e:
-        print(f"Error marking done: {e}")
-        return JSONResponse(status_code=500, content={"error": str(e)})
+
 
 @app.delete("/bookings/{booking_id}")
 async def delete_booking_by_booking_id(booking_id: str):
@@ -730,10 +758,62 @@ class StatusUpdate(BaseModel):
 async def update_booking_status(id: str, update: StatusUpdate):
     if not supabase: return {"error": "DB error"}
     try:
+        # Get booking details first
+        booking_res = supabase.table('bookings').select('*').eq('id', id).execute()
+        if not booking_res.data:
+            return JSONResponse(status_code=404, content={"error": "Booking not found"})
+            
+        b = booking_res.data[0]
+        
+        # Update status
         supabase.table('bookings').update({'status': update.status}).eq('id', id).execute()
+        
+        # Send Notification to Client
+        raw_client_id = str(b.get('telegram_id')).strip()
+        print(f"DEBUG: Processing notification for booking {id}. Status: {update.status}. Client ID: {raw_client_id}")
+
+        # Check if ID looks like a telegram ID (digits)
+        if raw_client_id and raw_client_id.isdigit():
+            client_id = int(raw_client_id)
+            msg = ""
+            markup = None
+            
+            if update.status == 'done':
+                master_name = b.get('master', 'Мастер')
+                msg = (
+                    f"✂️ {master_name} завершил твою стрижку!\n\n"
+                    f"Спасибо что доверился нам — это всегда приятно 🤝\n"
+                    f"Надеемся увидеть тебя снова в CHOP BAR.\n\n"
+                    f"Если понравилось — возвращайся, мы всегда здесь 💈"
+                )
+                if MINI_APP_URL:
+                     markup = {
+                        "inline_keyboard": [[
+                            {"text": "Записаться снова 💈", "web_app": {"url": MINI_APP_URL}}
+                        ]]
+                     }
+            elif update.status == 'cancelled':
+                 msg = f"❌ Ваша запись отменена мастером.\n\nМастер: {b['master']}\nДата: {b['date']}\nВремя: {b['time']}"
+            elif update.status == 'confirmed':
+                 msg = f"✅ Ваша запись подтверждена мастером!\n\nЖдем вас {b['date']} в {b['time']}."
+            
+            if msg:
+                print(f"DEBUG: Sending message to {client_id}: {msg[:20]}...")
+                await send_telegram_message(BOT_TOKEN, client_id, msg, reply_markup=markup)
+            else:
+                print("DEBUG: No message generated for this status.")
+        else:
+            print(f"DEBUG: Invalid client ID: {raw_client_id}")
+        
         return {"success": True}
     except Exception as e:
+        print(f"Error updating status: {e}")
         return {"error": str(e)}
+
+@app.patch("/bookings/{booking_id}/done")
+async def mark_booking_done(booking_id: str):
+    # Reuse update_booking_status logic
+    return await update_booking_status(booking_id, StatusUpdate(status='done'))
 
 if __name__ == "__main__":
     import uvicorn

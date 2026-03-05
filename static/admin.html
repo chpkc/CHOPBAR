@@ -591,6 +591,7 @@
 <div class="tabs">
     <div class="tab active" onclick="switchTab('active')">АКТИВНЫЕ</div>
     <div class="tab" onclick="switchTab('past')">ИСТОРИЯ</div>
+    <div class="tab" onclick="switchTab('done')">ВЫПОЛНЕННЫЕ</div>
     <div class="tab" onclick="switchTab('barbers')">МАСТЕРА</div>
     <div class="tab" onclick="switchTab('services')">УСЛУГИ</div>
 </div>
@@ -843,7 +844,12 @@
 
         let filtered = bookingsData;
         if (currentTab === 'active') {
-            filtered = bookingsData.filter(b => b.status === 'new');
+            filtered = bookingsData.filter(b => b.status === 'new' || b.status === 'confirmed');
+        } else if (currentTab === 'done') {
+            filtered = bookingsData.filter(b => b.status === 'done');
+        } else if (currentTab === 'past') {
+             // History: cancelled or old dates
+             filtered = bookingsData.filter(b => b.status === 'cancelled' || (new Date(b.date) < new Date() && b.status !== 'done' && b.status !== 'new'));
         }
 
         // Sort by date desc
@@ -851,8 +857,14 @@
 
         let lastDate = null;
 
+        if (filtered.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);">Нет записей</div>';
+            return;
+        }
+
         filtered.forEach((b, index) => {
             const isCancelled = b.status === 'cancelled';
+            const isDone = b.status === 'done';
             
             // Date Section Header (for grouping)
             if (b.date !== lastDate) {
@@ -871,11 +883,22 @@
             
             const dateDisplay = formatDate(b.date) + ' · ' + b.time;
             const priceDisplay = (b.price || 0).toLocaleString('ru-RU');
-            const statusText = isCancelled ? 'ОТМЕНЕНО' : '';
+            
+            let statusText = '';
+            if (isCancelled) statusText = 'ОТМЕНЕНО';
+            if (isDone) statusText = 'ВЫПОЛНЕНО';
+
+            let actionButtons = '';
+            if (!isCancelled && !isDone) {
+                actionButtons = `
+                    <button class="btn-cancel" onclick="cancelBooking('${b.id}')">ОТМЕНИТЬ</button>
+                    <button class="btn-cancel" style="border-color:var(--accent-gold); color:var(--primary-dark);" onclick="markDone('${b.id}')">ЗАВЕРШИТЬ</button>
+                `;
+            }
 
             el.innerHTML = `
-                <div class="date-strip ${isCancelled ? 'cancelled' : ''}">
-                    <span class="date-text">${dateDisplay} ${statusText ? '— ' + statusText : ''}</span>
+                <div class="date-strip ${isCancelled ? 'cancelled' : ''}" style="${isDone ? 'background-color:#4CAF50;' : ''}">
+                    <span class="date-text" style="${isDone ? 'color:white;' : ''}">${dateDisplay} ${statusText ? '— ' + statusText : ''}</span>
                     <span class="price-text">${priceDisplay} <span class="currency">₸</span></span>
                 </div>
                 <div class="info-row">
@@ -891,7 +914,7 @@
                     <span class="value">ID: ${b.telegram_id}</span>
                 </div>
                 <div class="action-row">
-                    <button class="btn-cancel" onclick="cancelBooking('${b.id}')">ОТМЕНИТЬ</button>
+                    ${actionButtons}
                 </div>
             `;
             container.appendChild(el);
@@ -1059,6 +1082,26 @@
         try {
             await fetch(`/bookings/${id}`, { method: 'DELETE' });
             fetchBookings(); // refresh
+        } catch (e) {
+            alert('Ошибка: ' + e);
+        }
+    }
+    
+    async function markDone(id) {
+        if(!confirm('Завершить стрижку? Клиенту придет уведомление.')) return;
+        try {
+            // Use the API endpoint that sends notifications
+            const res = await fetch(`/barber/bookings/${id}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({status: 'done'})
+            });
+            
+            if (res.ok) {
+                fetchBookings();
+            } else {
+                alert("Ошибка обновления статуса");
+            }
         } catch (e) {
             alert('Ошибка: ' + e);
         }

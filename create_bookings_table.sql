@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS public.bookings (
     status text DEFAULT 'new',
     created_at timestamp with time zone DEFAULT now(),
     notified_24h boolean DEFAULT false,
-    notified_2h boolean DEFAULT false
+    notified_2h boolean DEFAULT false,
+    notified_1h boolean DEFAULT false,
+    notified_30m boolean DEFAULT false
 );
 
 -- Enable Row Level Security (RLS)
