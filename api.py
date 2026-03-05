@@ -2,8 +2,12 @@ import os
 import json
 import re
 import datetime
+from datetime import timedelta, timezone
 from typing import Optional, List, Union
 from fastapi import FastAPI, Request, HTTPException
+
+# Timezone
+pavlodar_tz = timezone(timedelta(hours=5))
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -379,7 +383,7 @@ async def get_active_booking(telegram_id: str):
             .execute()
             
         bookings = response.data
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(pavlodar_tz)
         
         # Sort bookings by date and time
         # We want the nearest future booking, OR if all are in past (but status=new), show the most recent one?
@@ -426,6 +430,34 @@ async def delete_booking(booking_id: str):
         return JSONResponse(status_code=503, content={"error": "Database not configured"})
 
 # --- BARBER API ---
+@app.get("/bookings/master-by-id")
+async def get_bookings_by_telegram_id(telegram_id: str, date: str = None):
+    if not supabase:
+        return {"bookings": [], "barber": None}
+    
+    try:
+        # First find barber name by telegram_id
+        barber = supabase.table('barbers').select('name').eq('telegram_id', telegram_id).execute()
+        
+        if not barber.data:
+            return {"bookings": [], "barber": None}
+        
+        barber_name = barber.data[0]['name']
+        
+        query = supabase.table('bookings')\
+            .select('*')\
+            .eq('master', barber_name)\
+            .neq('status', 'cancelled')
+        
+        if date:
+            query = query.eq('date', date)
+        
+        result = query.order('date').order('time').execute()
+        return {"bookings": result.data, "barber": barber_name}
+    except Exception as e:
+        print(f"Error fetching bookings by master id: {e}")
+        return {"bookings": [], "barber": None}
+
 @app.get("/barber/auth")
 async def barber_auth(telegram_id: str):
     if not supabase: return {"error": "DB error"}
@@ -446,7 +478,7 @@ async def get_barber_bookings(name: str, scope: str = 'today'):
         name = name.strip()
         
         # Get today's date
-        today_date = datetime.date.today()
+        today_date = datetime.datetime.now(pavlodar_tz).date()
         today_str = today_date.isoformat()
         
         print(f"Fetching bookings for master: '{name}', scope: {scope}, date: {today_str}")

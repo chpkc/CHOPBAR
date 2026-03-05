@@ -220,43 +220,24 @@
     let currentTab = 'today';
     let barberName = null;
     let allBookings = [];
+    let masterId = null;
 
     async function init() {
-        // Try to get ID from Telegram WebApp
-        let userId = tg.initDataUnsafe?.user?.id;
+        const params = new URLSearchParams(window.location.search);
+        masterId = params.get('master_id');
         
-        // DEBUG: If not in Telegram (local testing), use a default ID or ask user
-        if (!userId) {
-            console.warn("No Telegram user ID found. Are you running outside Telegram?");
-            // For debugging purposes, you can uncomment this line to test with a specific ID:
-            // userId = 1396316823; // Altair's ID
+        // Fallback to Telegram WebApp ID
+        if (!masterId) {
+            masterId = tg.initDataUnsafe?.user?.id;
         }
 
-        if (!userId) {
-            document.getElementById('bookings-list').innerHTML = '<div class="loading">Ошибка: Запустите через Telegram </div>';
+        if (!masterId) {
+            document.getElementById('bookings-list').innerHTML = '<div class="loading">Ошибка: Запустите через Telegram (нет master_id)</div>';
             return;
         }
         
-        // Auth check
-        try {
-            const res = await fetch(`/barber/auth?telegram_id=${userId}`, { cache: "no-store" });
-            const data = await res.json();
-            
-            if (data.error) {
-                document.getElementById('bookings-list').innerHTML = `<div class="loading" style="color:red">⛔️ ${data.error}</div>`;
-                return;
-            }
-            
-            barberName = data.name.trim(); // Ensure no trailing spaces
-            document.getElementById('barber-name').innerText = barberName;
-            
-            // Switch to 'all' tab by default to see all bookings first (for debugging)
-            // switchTab('all'); 
-            fetchBookings();
-        } catch (e) {
-            console.error(e);
-            document.getElementById('loading').innerText = "ОШИБКА СЕТИ";
-        }
+        // Initial fetch to get name and bookings
+        fetchBookings();
     }
 
     async function fetchBookings() {
@@ -264,12 +245,47 @@
         document.getElementById('bookings-list').innerHTML = '';
         
         try {
-            const res = await fetch(`/barber/bookings?name=${encodeURIComponent(barberName)}&scope=${currentTab}&t=${Date.now()}`, { cache: "no-store" });
+            // Prepare URL
+            let url = `/bookings/master-by-id?telegram_id=${masterId}&t=${Date.now()}`;
+            
+            // For 'today', we can filter on server side
+            if (currentTab === 'today') {
+                const now = new Date();
+                const today = now.toISOString().split('T')[0];
+                url += `&date=${today}`;
+            }
+            
+            const res = await fetch(url, { cache: "no-store" });
             const data = await res.json();
-            allBookings = data;
-            renderList(data);
+            
+            if (!data.barber) {
+                 document.getElementById('bookings-list').innerHTML = '<div class="loading">Мастер не найден</div>';
+                 return;
+            }
+
+            barberName = data.barber;
+            document.getElementById('barber-name').innerText = barberName;
+            
+            let bookings = data.bookings;
+
+            // Client-side filtering for 'week'
+            if (currentTab === 'week') {
+                const now = new Date();
+                const today = new Date(now.toISOString().split('T')[0]); // Midnight
+                const nextWeek = new Date(today);
+                nextWeek.setDate(today.getDate() + 7);
+                
+                bookings = bookings.filter(b => {
+                    const bDate = new Date(b.date);
+                    return bDate >= today && bDate <= nextWeek;
+                });
+            }
+
+            allBookings = bookings;
+            renderList(bookings);
         } catch (e) {
             console.error(e);
+            document.getElementById('bookings-list').innerHTML = '<div class="loading">Ошибка сети</div>';
         } finally {
             document.getElementById('loading').classList.add('hidden');
         }

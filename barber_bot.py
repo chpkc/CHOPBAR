@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Bot, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
@@ -61,6 +61,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             if not app_url.endswith('/'): app_url += '/'
             if not app_url.endswith('barber/'): 
                 if 'barber' not in app_url: app_url += 'barber'
+        
+        # Add master_id query param
+        app_url = f"{app_url}?master_id={user_id}"
         
         kb = [[KeyboardButton("✂️ Открыть рабочий стол", web_app=WebAppInfo(url=app_url))]]
         
