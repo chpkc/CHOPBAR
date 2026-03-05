@@ -63,7 +63,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 if 'barber' not in app_url: app_url += 'barber'
         
         # Add master_id query param
-        app_url = f"{app_url}?master_id={user_id}"
+        # Check if URL already has params
+        if '?' in app_url:
+             app_url = f"{app_url}&master_id={user_id}"
+        else:
+             app_url = f"{app_url}?master_id={user_id}"
         
         kb = [[KeyboardButton("✂️ Открыть рабочий стол", web_app=WebAppInfo(url=app_url))]]
         

@@ -224,13 +224,10 @@
 
     async function init() {
         const params = new URLSearchParams(window.location.search);
-        masterId = params.get('master_id');
+        // Try getting master_id from URL first, then fallback to Telegram User ID
+        const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        masterId = params.get('master_id') || (tgUser ? String(tgUser.id) : null);
         
-        // Fallback to Telegram WebApp ID
-        if (!masterId) {
-            masterId = tg.initDataUnsafe?.user?.id;
-        }
-
         if (!masterId) {
             document.getElementById('bookings-list').innerHTML = '<div class="loading">Ошибка: Запустите через Telegram (нет master_id)</div>';
             return;
