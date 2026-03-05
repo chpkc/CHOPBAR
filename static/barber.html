@@ -239,7 +239,7 @@
         
         // Auth check
         try {
-            const res = await fetch(`/barber/auth?telegram_id=${userId}`);
+            const res = await fetch(`/barber/auth?telegram_id=${userId}`, { cache: "no-store" });
             const data = await res.json();
             
             if (data.error) {
@@ -264,7 +264,7 @@
         document.getElementById('bookings-list').innerHTML = '';
         
         try {
-            const res = await fetch(`/barber/bookings?name=${encodeURIComponent(barberName)}&scope=${currentTab}`);
+            const res = await fetch(`/barber/bookings?name=${encodeURIComponent(barberName)}&scope=${currentTab}&t=${Date.now()}`, { cache: "no-store" });
             const data = await res.json();
             allBookings = data;
             renderList(data);
