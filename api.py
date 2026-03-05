@@ -416,6 +416,16 @@ async def get_active_booking(telegram_id: str):
         print(f"Error fetching active booking: {e}")
         return {"error": str(e)}
 
+@app.patch("/bookings/{booking_id}/done")
+async def mark_booking_done(booking_id: str):
+    if not supabase: return {"error": "DB error"}
+    try:
+        response = supabase.table("bookings").update({"status": "done"}).eq("id", booking_id).execute()
+        return {"status": "done", "id": booking_id}
+    except Exception as e:
+        print(f"Error marking done: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 @app.delete("/bookings/{booking_id}")
 async def delete_booking(booking_id: str):
     if supabase:

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -7,7 +8,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@400;500;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-color: #F9F4EA;
@@ -31,137 +32,139 @@
             padding-bottom: 40px;
         }
 
+        /* HEADER */
         header {
             background-color: var(--primary-dark);
             color: white;
-            padding: 20px;
+            padding: 16px 20px;
             position: sticky;
             top: 0;
             z-index: 100;
-            border-bottom: 2px solid var(--accent-gold);
+        }
+
+        .header-top {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .header-label {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 9px;
+            color: var(--accent-gold);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 4px;
         }
 
         h1 {
             font-family: 'Unbounded', sans-serif;
             font-weight: 900;
-            font-size: 16px;
+            font-size: 24px;
+            line-height: 1;
             margin: 0;
-            letter-spacing: 0.05em;
             text-transform: uppercase;
+            color: white;
         }
         
-        .barber-name {
-            font-family: 'Unbounded', sans-serif;
+        .barber-name-highlight {
             color: var(--accent-gold);
-            font-size: 12px;
         }
 
-        .container {
-            padding: 16px;
-        }
-
-        .booking-card {
-            background: var(--card-bg);
-            border: 1px solid var(--divider-color);
-            padding: 16px;
-            margin-bottom: 12px;
-            position: relative;
-        }
-
-        .booking-card.done {
-            opacity: 0.7;
-            background: #f0f0f0;
-        }
-
-        .card-header {
+        .live-indicator {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            gap: 6px;
         }
 
-        .time-badge {
-            background-color: var(--primary-dark);
-            color: var(--accent-gold);
+        .blink-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-gold);
+            border-radius: 50%;
+            animation: blink 1.5s infinite;
+        }
+
+        .live-text {
             font-family: 'Unbounded', sans-serif;
-            font-size: 14px;
-            padding: 6px 10px;
+            font-size: 10px;
+            color: var(--accent-gold);
             font-weight: 700;
         }
 
-        .price-tag {
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        .ticker-strip {
+            background-color: var(--accent-gold);
+            color: var(--primary-dark);
+            font-family: 'Unbounded', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 4px 0;
+            overflow: hidden;
+            white-space: nowrap;
+            text-transform: uppercase;
+        }
+
+        /* STATS ROW */
+        .stats-row {
+            display: flex;
+            background: #F9F4EA;
+            border-top: 3px solid var(--primary-dark);
+            border-bottom: 3px solid var(--primary-dark);
+        }
+
+        .stat-item {
+            flex: 1;
+            padding: 16px;
+            border-right: 1px solid var(--divider-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .stat-item:last-child {
+            border-right: none;
+        }
+
+        .stat-val {
             font-family: 'Unbounded', sans-serif;
             font-weight: 900;
-            font-size: 16px;
+            font-size: 36px;
+            line-height: 1;
             color: var(--primary-dark);
-        }
-
-        .service-title {
-            font-family: 'Unbounded', sans-serif;
-            font-weight: 700;
-            font-size: 14px;
             margin-bottom: 4px;
         }
 
-        .client-info {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-bottom: 12px;
-        }
-
-        .actions {
-            margin-top: 16px;
-            padding-top: 16px;
-            border-top: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-        }
-
-        .btn {
-            font-family: 'Unbounded', sans-serif;
-            font-size: 12px;
-            font-weight: 700;
-            padding: 12px 16px;
-            border: none;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-cancel {
-            background: transparent;
-            border: 1px solid var(--danger);
-            color: var(--danger);
-        }
-
-        .btn-done {
-            background: var(--primary-dark);
+        .stat-val.gold-text {
             color: var(--accent-gold);
         }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
+
+        .stat-label {
             font-family: 'Unbounded', sans-serif;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
             color: var(--text-muted);
-            font-size: 12px;
         }
 
+        .container {
+            padding: 0;
+        }
+
+        /* TABS */
         .tabs {
             display: flex;
-            background: #fff;
+            background: #F9F4EA;
             border-bottom: 1px solid var(--divider-color);
             position: sticky;
-            top: 61px;
+            top: 105px; /* Adjust based on header height */
             z-index: 90;
         }
 
@@ -170,11 +173,13 @@
             text-align: center;
             padding: 16px;
             font-family: 'Unbounded', sans-serif;
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
             color: var(--text-muted);
             cursor: pointer;
-            border-bottom: 2px solid transparent;
+            border-bottom: 3px solid transparent;
         }
 
         .tab.active {
@@ -182,24 +187,267 @@
             border-bottom-color: var(--accent-gold);
         }
 
-        .hidden { display: none !important; }
+        /* BOOKING LIST - NEWSPAPER STYLE */
+        .bookings-list {
+            padding-bottom: 40px;
+        }
+
+        .booking-row {
+            margin-bottom: 0;
+            animation: fadeUp 0.5s ease forwards;
+            opacity: 0;
+            transition: opacity 0.3s, background-color 0.3s;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .date-strip {
+            background-color: var(--primary-dark);
+            color: white;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
         
-        .status-label {
+        .date-strip.done {
+            background-color: #2A5A2A; /* Dark green */
+        }
+        
+        .date-strip.cancelled {
+            background-color: var(--divider-color);
+        }
+
+        .date-text {
+            font-family: 'Unbounded', sans-serif;
+            font-weight: 700;
+            font-size: 12px;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+        }
+        
+        .date-strip.done .date-text {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .date-strip.cancelled .date-text {
+            color: var(--text-muted);
+        }
+
+        .price-text {
+            font-family: 'Unbounded', sans-serif;
+            font-weight: 900;
+            font-size: 16px;
+            color: white;
+        }
+        
+        .date-strip.done .price-text {
+            opacity: 0.7;
+        }
+        
+        .date-strip.cancelled .price-text {
+            color: var(--text-muted);
+        }
+
+        .currency {
+            color: var(--accent-gold);
+        }
+        
+        .date-strip.done .currency {
+            color: white;
+            opacity: 0.7;
+        }
+        
+        .date-strip.cancelled .currency {
+             color: var(--text-muted);
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--divider-color);
+            background-color: #FFFFFF;
+        }
+        
+        .info-row:nth-child(even) {
+            background-color: #F9F4EA;
+        }
+        
+        .status-done .info-row, .status-cancelled .info-row {
+            opacity: 0.6;
+        }
+
+        .label {
+            width: 80px;
+            flex-shrink: 0;
             font-family: 'Unbounded', sans-serif;
             font-size: 10px;
-            font-weight: 900;
             text-transform: uppercase;
-            text-align: right;
-            margin-top: 12px;
+            color: var(--text-muted);
         }
+
+        .value {
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--primary-dark);
+            flex-grow: 1;
+        }
+        
+        .username {
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .action-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 12px 16px;
+            background-color: #F9F4EA;
+            border-bottom: 3px solid var(--bg-color); /* Spacer */
+        }
+        
+        .status-done .action-row, .status-cancelled .action-row {
+            display: none;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            font-family: 'Unbounded', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .btn-done {
+            background: transparent;
+            border: 1px solid #2A5A2A;
+            color: #2A5A2A;
+        }
+        
+        .btn-done:active {
+            background: #2A5A2A;
+            color: white;
+        }
+
+        .btn-cancel {
+            background: transparent;
+            border: 1px solid var(--divider-color);
+            color: var(--text-muted);
+        }
+
+        .btn-cancel:hover {
+            border-color: #8B3A1A;
+            color: #8B3A1A;
+        }
+        
+        /* DATE HEADER */
+        .date-section-header {
+            font-family: 'Unbounded', sans-serif;
+            font-weight: 900;
+            font-size: 12px;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            padding: 20px 16px 8px 16px;
+            text-transform: uppercase;
+        }
+        
+        .date-section-header::before {
+            content: '◆';
+            color: var(--accent-gold);
+            margin-right: 8px;
+            font-size: 10px;
+        }
+        
+        .date-section-header::after {
+            content: '';
+            flex-grow: 1;
+            height: 1px;
+            background-color: var(--divider-color);
+            margin-left: 12px;
+        }
+
+        .loading {
+            padding: 40px;
+            text-align: center;
+            font-family: 'Unbounded', sans-serif;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+        
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+        }
+        
+        .empty-icon {
+            font-family: 'Unbounded', sans-serif;
+            font-weight: 900;
+            font-size: 48px;
+            color: var(--accent-gold);
+            display: block;
+            margin-bottom: 16px;
+        }
+        
+        .empty-title {
+            font-family: 'Unbounded', sans-serif;
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--primary-dark);
+            margin-bottom: 4px;
+        }
+        
+        .empty-sub {
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>РАБОЧИЙ СТОЛ</h1>
-    <span class="barber-name" id="barber-name">...</span>
+    <div class="header-top">
+        <div>
+            <span class="header-label">ПАВЛОДАР · CHOP</span>
+            <h1>МАСТЕР / <span class="barber-name-highlight" id="barber-name">...</span></h1>
+        </div>
+        <div class="live-indicator">
+            <div class="blink-dot"></div>
+            <span class="live-text">LIVE</span>
+        </div>
+    </div>
+    <div class="ticker-strip" id="ticker">
+        CHOP BARBERSHOP · РАБОЧИЙ СТОЛ · ПАВЛОДАР · CHOP BARBERSHOP · РАБОЧИЙ СТОЛ · ПАВЛОДАР ·
+    </div>
 </header>
+
+<div class="stats-row">
+    <div class="stat-item">
+        <span class="stat-val gold-text" id="stat-today">0</span>
+        <span class="stat-label">СЕГОДНЯ</span>
+    </div>
+    <div class="stat-item">
+        <span class="stat-val" id="stat-week">0</span>
+        <span class="stat-label">НЕДЕЛЯ</span>
+    </div>
+    <div class="stat-item">
+        <span class="stat-val" id="stat-total">0</span>
+        <span class="stat-label">ВСЕГО</span>
+    </div>
+</div>
 
 <div class="tabs">
     <div class="tab active" onclick="switchTab('today')">СЕГОДНЯ</div>
@@ -207,7 +455,7 @@
     <div class="tab" onclick="switchTab('all')">ВСЕ</div>
 </div>
 
-<div class="container">
+<div class="container bookings-list">
     <div id="loading" class="loading">ЗАГРУЗКА...</div>
     <div id="bookings-list"></div>
 </div>
@@ -233,24 +481,20 @@
             return;
         }
         
-        // Initial fetch to get name and bookings
-        fetchBookings();
+        // Initial fetch
+        await fetchBookings();
+        
+        // Refresh every 30s
+        setInterval(() => fetchBookings(true), 30000);
     }
 
-    async function fetchBookings() {
-        document.getElementById('loading').classList.remove('hidden');
-        document.getElementById('bookings-list').innerHTML = '';
+    async function fetchBookings(silent = false) {
+        if (!silent) document.getElementById('loading').classList.remove('hidden');
         
         try {
-            // Prepare URL
+            // Fetch ALL bookings for this master to calculate stats correctly
+            // We pass a timestamp to avoid caching
             let url = `/bookings/master-by-id?telegram_id=${masterId}&t=${Date.now()}`;
-            
-            // For 'today', we can filter on server side
-            if (currentTab === 'today') {
-                const now = new Date();
-                const today = now.toISOString().split('T')[0];
-                url += `&date=${today}`;
-            }
             
             const res = await fetch(url, { cache: "no-store" });
             const data = await res.json();
@@ -263,109 +507,190 @@
             barberName = data.barber;
             document.getElementById('barber-name').innerText = barberName;
             
-            let bookings = data.bookings;
-
-            // Client-side filtering for 'week'
-            if (currentTab === 'week') {
-                const now = new Date();
-                const today = new Date(now.toISOString().split('T')[0]); // Midnight
-                const nextWeek = new Date(today);
-                nextWeek.setDate(today.getDate() + 7);
-                
-                bookings = bookings.filter(b => {
-                    const bDate = new Date(b.date);
-                    return bDate >= today && bDate <= nextWeek;
-                });
-            }
-
-            allBookings = bookings;
-            renderList(bookings);
+            // Update ticker
+            document.getElementById('ticker').innerText = `CHOP BARBERSHOP · РАБОЧИЙ СТОЛ · ${barberName.toUpperCase()} · ПАВЛОДАР · CHOP BARBERSHOP · РАБОЧИЙ СТОЛ · ${barberName.toUpperCase()} · ПАВЛОДАР ·`;
+            
+            allBookings = data.bookings;
+            
+            updateStats();
+            if (!silent) renderList();
+            
         } catch (e) {
             console.error(e);
-            document.getElementById('bookings-list').innerHTML = '<div class="loading">Ошибка сети</div>';
+            if (!silent) document.getElementById('bookings-list').innerHTML = '<div class="loading">Ошибка сети</div>';
         } finally {
-            document.getElementById('loading').classList.add('hidden');
+            if (!silent) document.getElementById('loading').classList.add('hidden');
         }
+    }
+
+    function updateStats() {
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        
+        // Today
+        const todayCount = allBookings.filter(b => b.date === todayStr && b.status !== 'cancelled').length;
+        
+        // Week
+        const todayDate = new Date(todayStr);
+        const nextWeekDate = new Date(todayDate);
+        nextWeekDate.setDate(todayDate.getDate() + 7);
+        
+        const weekCount = allBookings.filter(b => {
+            if (b.status === 'cancelled') return false;
+            const d = new Date(b.date);
+            return d >= todayDate && d <= nextWeekDate;
+        }).length;
+        
+        // Total (All active)
+        const totalCount = allBookings.filter(b => b.status !== 'cancelled').length;
+        
+        document.getElementById('stat-today').innerText = todayCount;
+        document.getElementById('stat-week').innerText = weekCount;
+        document.getElementById('stat-total').innerText = totalCount;
     }
 
     function switchTab(tab) {
         currentTab = tab;
         document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
         event.currentTarget.classList.add('active');
-        fetchBookings();
+        renderList();
+    }
+    
+    function formatDate(dateStr) {
+        const date = new Date(dateStr);
+        const day = date.getDate();
+        const months = ['марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря', 'января', 'февраля'];
+        // Note: month index 0 is Jan, but array above starts with March? Let's fix standard RU
+        const monthsRu = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+        const month = monthsRu[date.getMonth()];
+        const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+        const weekDay = days[date.getDay()];
+        return `${weekDay}, ${day} ${month}`;
     }
 
-    function renderList(bookings) {
+    function renderList() {
         const container = document.getElementById('bookings-list');
         container.innerHTML = '';
         
-        if (bookings.length === 0) {
-            container.innerHTML = '<div class="loading">Записей нет 🎉</div>';
+        let filtered = allBookings;
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const todayDate = new Date(todayStr);
+
+        if (currentTab === 'today') {
+            filtered = allBookings.filter(b => b.date === todayStr);
+        } else if (currentTab === 'week') {
+            const nextWeekDate = new Date(todayDate);
+            nextWeekDate.setDate(todayDate.getDate() + 7);
+            filtered = allBookings.filter(b => {
+                const d = new Date(b.date);
+                return d >= todayDate && d <= nextWeekDate;
+            });
+        }
+        
+        // Sort: Active first, then by time
+        // Actually, newspaper style usually strictly chronological
+        filtered.sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
+        
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <span class="empty-icon">✂</span>
+                    <div class="empty-title">Записей нет</div>
+                    <div class="empty-sub">Свободный день 🎉</div>
+                </div>
+            `;
             return;
         }
 
-        bookings.forEach(b => {
-            const el = document.createElement('div');
-            el.className = `booking-card ${b.status === 'done' ? 'done' : ''}`;
-            
+        let lastDate = null;
+
+        filtered.forEach((b, index) => {
             const isDone = b.status === 'done';
-            
-            let actionsHtml = '';
-            if (b.status === 'new') {
-                actionsHtml = `
-                    <div class="actions">
-                        <button class="btn btn-cancel" onclick="updateStatus('${b.id}', 'cancelled')">Отменить</button>
-                        <button class="btn btn-done" onclick="updateStatus('${b.id}', 'done')">✓ Выполнено</button>
-                    </div>
-                `;
-            } else if (isDone) {
-                actionsHtml = `<div class="status-label" style="color: var(--success)">ВЫПОЛНЕНО</div>`;
+            const isCancelled = b.status === 'cancelled';
+            let rowClass = '';
+            if (isDone) rowClass = 'status-done';
+            if (isCancelled) rowClass = 'status-cancelled';
+
+            // Date Section Header (for grouping)
+            if (b.date !== lastDate) {
+                 const dateHeader = document.createElement('div');
+                 dateHeader.className = 'date-section-header';
+                 dateHeader.innerText = formatDate(b.date);
+                 container.appendChild(dateHeader);
+                 lastDate = b.date;
             }
 
-            // Date header if needed (for week view)
-            let dateHeader = '';
-            if (currentTab === 'week') {
-                dateHeader = `<div style="font-size: 10px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase;">${b.date}</div>`;
-            }
+            const el = document.createElement('div');
+            el.className = `booking-row ${rowClass}`;
+            el.style.animationDelay = `${index * 40}ms`;
+            
+            const dateDisplay = formatDate(b.date) + ' · ' + b.time;
+            const priceDisplay = (b.price || 0).toLocaleString('ru-RU');
+            
+            let statusLabel = '';
+            if (isDone) statusLabel = '— ВЫПОЛНЕНО ✓';
+            if (isCancelled) statusLabel = '— ОТМЕНЕНО';
 
             el.innerHTML = `
-                ${dateHeader}
-                <div class="card-header">
-                    <span class="time-badge">${b.time}</span>
-                    <span class="price-tag">${b.price}₸</span>
+                <div class="date-strip ${isDone ? 'done' : ''} ${isCancelled ? 'cancelled' : ''}">
+                    <span class="date-text">${dateDisplay} ${statusLabel}</span>
+                    <span class="price-text">${priceDisplay} <span class="currency">₸</span></span>
                 </div>
-                
-                <div class="service-title">${b.service}</div>
-                <div class="client-info">Клиент ID: <span style="font-family: monospace">${b.telegram_id}</span></div>
-                
-                ${actionsHtml}
+                <div class="info-row">
+                    <span class="label">Клиент</span>
+                    <span class="value">
+                        ${b.client_name || 'Клиент'} 
+                        <span class="username">${b.username ? '(@' + b.username + ')' : ''}</span>
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Услуга</span>
+                    <span class="value">${b.service} · ${b.duration} мин</span>
+                </div>
+                <div class="action-row">
+                    <button class="btn btn-done" onclick="markDone('${b.id}')">✅ ВЫПОЛНЕНО</button>
+                    <button class="btn btn-cancel" onclick="cancelBooking('${b.id}')">❌ ОТМЕНИТЬ</button>
+                </div>
             `;
             container.appendChild(el);
         });
     }
-
-    async function updateStatus(id, status) {
-        if (status === 'cancelled' && !confirm("Отменить запись и уведомить клиента?")) return;
-        
+    
+    async function markDone(id) {
+        if(!confirm('Отметить как выполнено?')) return;
         try {
-            await fetch(`/barber/bookings/${id}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: status })
-            });
-            fetchBookings(); // Refresh
-        } catch(e) {
-            alert("Ошибка обновления");
+            // Optimistic update
+            const idx = allBookings.findIndex(b => b.id === id);
+            if(idx !== -1) allBookings[idx].status = 'done';
+            renderList();
+            
+            await fetch(`/bookings/${id}/done`, { method: 'PATCH' });
+            fetchBookings(true);
+        } catch (e) {
+            console.error(e);
+            // Revert if needed or just reload
+            fetchBookings(true);
+        }
+    }
+
+    async function cancelBooking(id) {
+        if(!confirm('Отменить запись?')) return;
+        try {
+            // Optimistic update
+            const idx = allBookings.findIndex(b => b.id === id);
+            if(idx !== -1) allBookings[idx].status = 'cancelled';
+            renderList();
+            
+            await fetch(`/bookings/${id}`, { method: 'DELETE' });
+            fetchBookings(true);
+        } catch (e) {
+            console.error(e);
+            fetchBookings(true);
         }
     }
 
     init();
-    
-    // Auto refresh
-    setInterval(() => {
-        if (barberName) fetchBookings();
-    }, 30000);
-
 </script>
 </body>
 </html>
