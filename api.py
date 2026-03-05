@@ -440,9 +440,6 @@ async def barber_auth(telegram_id: str):
 async def get_barber_bookings(name: str, scope: str = 'today'):
     if not supabase: return []
     try:
-        # Normalize name
-        name = name.strip()
-        
         # Get today's date
         today_date = datetime.date.today()
         today_str = today_date.isoformat()
