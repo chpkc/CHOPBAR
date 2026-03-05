@@ -29,6 +29,8 @@
             margin: 0;
             padding: 0;
             padding-bottom: 40px;
+            overflow-x: hidden; /* Prevent horizontal scroll/sway */
+            min-height: 100vh;
         }
 
         /* HEADER */
@@ -183,7 +185,7 @@
 
         /* BOOKING LIST - NEWSPAPER STYLE */
         .bookings-list {
-            padding-bottom: 80px; /* More space for FAB */
+            padding-bottom: 120px; /* More space for FAB and bottom bar */
         }
 
         .booking-row {
@@ -928,15 +930,15 @@
             
             el.innerHTML = `
                 <div class="info-row" style="background: transparent;">
-                    <div style="flex:1">
-                        <div class="value" style="font-size:16px;">${s.name}</div>
+                    <div style="flex:1; overflow: hidden;">
+                        <div class="value" style="font-size:16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${s.name}</div>
                         <div class="label" style="width:auto; margin-top:4px;">${s.duration_minutes} мин · ${masterName}</div>
                     </div>
-                    <div class="price-text" style="color:var(--primary-dark); font-size:16px;">${s.price} ₸</div>
+                    <div class="price-text" style="color:var(--primary-dark); font-size:16px; margin-left: 10px;">${s.price} ₸</div>
                 </div>
                 <div class="action-row">
-                    <button class="btn-cancel" onclick="deleteService(${s.id})">УДАЛИТЬ</button>
-                    <button class="btn-done" onclick="editService(${s.id})">ИЗМЕНИТЬ</button>
+                    <button class="btn-cancel" onclick="deleteService('${s.id}')">УДАЛИТЬ</button>
+                    <button class="btn-done" onclick="editService('${s.id}')">ИЗМЕНИТЬ</button>
                 </div>
             `;
             container.appendChild(el);
