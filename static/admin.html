@@ -603,8 +603,9 @@
 
 <div class="tabs">
     <div class="tab active" onclick="switchTab('active')">АКТИВНЫЕ</div>
-    <div class="tab" onclick="switchTab('all')">ВСЕ ЗАПИСИ</div>
+    <div class="tab" onclick="switchTab('past')">ИСТОРИЯ</div>
     <div class="tab" onclick="switchTab('barbers')">МАСТЕРА</div>
+    <div class="tab" onclick="switchTab('services')">УСЛУГИ</div>
 </div>
 
 <div id="content-bookings" class="container bookings-list">
@@ -616,6 +617,16 @@
     <div class="section-title">МАСТЕРА</div>
     <div id="barbers-list"></div>
     <button class="btn-add" onclick="showAddBarberForm()">+ Добавить мастера</button>
+</div>
+
+<div id="services-view" class="container hidden">
+    <div class="stats-row" style="margin-bottom: 20px;">
+        <div class="stat-item" onclick="showServiceModal()" style="cursor: pointer; background: #fff;">
+            <span class="stat-val" style="color:var(--primary-dark); font-size: 24px;">+</span>
+            <span class="stat-label">ДОБАВИТЬ УСЛУГУ</span>
+        </div>
+    </div>
+    <div id="services-list" class="bookings-list"></div>
 </div>
 
 <div class="fab-add" onclick="showAddBookingModal()">+</div>
@@ -645,10 +656,50 @@
             <label class="form-label">Telegram ID</label>
             <input type="text" id="barber-tg-input" class="form-input" placeholder="Цифры ID">
         </div>
+
+        <div class="form-group">
+            <label class="form-label">Фото (URL)</label>
+            <input type="text" id="barber-photo-input" class="form-input" placeholder="https://...">
+        </div>
         
         <div class="form-actions">
             <button class="btn-modal btn-close" onclick="closeModal()">Отмена</button>
             <button class="btn-modal btn-save" onclick="saveBarber()">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Service -->
+<div id="service-modal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-title" id="service-modal-title">НОВАЯ УСЛУГА</div>
+        <input type="hidden" id="service-id">
+        
+        <div class="form-group">
+            <label class="form-label">Название</label>
+            <input type="text" id="service-name-input" class="form-input" placeholder="Стрижка">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Цена (₸)</label>
+            <input type="number" id="service-price-input" class="form-input" placeholder="5000">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Длительность (мин)</label>
+            <input type="number" id="service-duration-input" class="form-input" placeholder="45">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Мастер (опционально)</label>
+            <select id="service-master-input" class="form-input">
+                <option value="">Для всех</option>
+            </select>
+        </div>
+        
+        <div class="form-actions">
+            <button class="btn-modal btn-close" onclick="closeServiceModal()">Отмена</button>
+            <button class="btn-modal btn-save" onclick="saveService()">Сохранить</button>
         </div>
     </div>
 </div>
@@ -702,10 +753,11 @@
 
     let bookingsData = [];
     let barbersData = [];
+    let servicesData = [];
     let currentTab = 'active';
 
     async function init() {
-        await Promise.all([fetchBookings(), fetchBarbers()]);
+        await Promise.all([fetchBookings(), fetchBarbers(), fetchServices()]);
         render();
         
         // Setup stats refresh flash
@@ -716,6 +768,16 @@
             }, 300);
             fetchBookings(true); // silent update
         }, 30000);
+    }
+
+    async function fetchServices() {
+        try {
+            const res = await fetch('/services', { cache: "no-store" });
+            servicesData = await res.json();
+            renderServices();
+        } catch (e) {
+            console.error(e);
+        }
     }
 
     async function fetchBookings(silent = false) {
@@ -764,12 +826,16 @@
         document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
         event.currentTarget.classList.add('active');
 
+        document.getElementById('content-bookings').classList.add('hidden');
+        document.getElementById('content-barbers').classList.add('hidden');
+        document.getElementById('services-view').classList.add('hidden');
+
         if (tab === 'barbers') {
-            document.getElementById('content-bookings').classList.add('hidden');
             document.getElementById('content-barbers').classList.remove('hidden');
+        } else if (tab === 'services') {
+            document.getElementById('services-view').classList.remove('hidden');
         } else {
             document.getElementById('content-bookings').classList.remove('hidden');
-            document.getElementById('content-barbers').classList.add('hidden');
             renderBookings();
         }
     }
@@ -845,6 +911,133 @@
         });
     }
 
+    function renderServices() {
+        const container = document.getElementById('services-list');
+        container.innerHTML = '';
+        
+        servicesData.forEach(s => {
+            const el = document.createElement('div');
+            el.className = 'booking-row';
+            
+            // Find master name if assigned
+            let masterName = 'Все мастера';
+            if (s.master_id) {
+                const m = barbersData.find(b => String(b.telegram_id) === String(s.master_id));
+                masterName = m ? m.name : 'Неизвестный мастер';
+            }
+            
+            el.innerHTML = `
+                <div class="info-row" style="background: transparent;">
+                    <div style="flex:1">
+                        <div class="value" style="font-size:16px;">${s.name}</div>
+                        <div class="label" style="width:auto; margin-top:4px;">${s.duration_minutes} мин · ${masterName}</div>
+                    </div>
+                    <div class="price-text" style="color:var(--primary-dark); font-size:16px;">${s.price} ₸</div>
+                </div>
+                <div class="action-row">
+                    <button class="btn-cancel" onclick="deleteService(${s.id})">УДАЛИТЬ</button>
+                    <button class="btn-done" onclick="editService(${s.id})">ИЗМЕНИТЬ</button>
+                </div>
+            `;
+            container.appendChild(el);
+        });
+    }
+
+    // --- SERVICE MODAL ---
+    function showServiceModal(service = null) {
+        openServiceModal(service);
+    }
+    
+    function openServiceModal(service = null) {
+        const modal = document.getElementById('service-modal');
+        const title = document.getElementById('service-modal-title');
+        
+        // Populate masters dropdown
+        const select = document.getElementById('service-master-input');
+        select.innerHTML = '<option value="">Для всех</option>';
+        barbersData.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b.telegram_id;
+            opt.text = b.name;
+            select.appendChild(opt);
+        });
+
+        if (service) {
+            title.innerText = 'РЕДАКТИРОВАНИЕ';
+            document.getElementById('service-id').value = service.id;
+            document.getElementById('service-name-input').value = service.name;
+            document.getElementById('service-price-input').value = service.price;
+            document.getElementById('service-duration-input').value = service.duration_minutes;
+            document.getElementById('service-master-input').value = service.master_id || '';
+        } else {
+            title.innerText = 'НОВАЯ УСЛУГА';
+            document.getElementById('service-id').value = '';
+            document.getElementById('service-name-input').value = '';
+            document.getElementById('service-price-input').value = '';
+            document.getElementById('service-duration-input').value = '45';
+            document.getElementById('service-master-input').value = '';
+        }
+        
+        modal.classList.remove('hidden');
+    }
+    
+    function closeServiceModal() {
+        document.getElementById('service-modal').classList.add('hidden');
+    }
+    
+    function editService(id) {
+        const s = servicesData.find(x => x.id === id);
+        if (s) openServiceModal(s);
+    }
+    
+    async function deleteService(id) {
+        if(!confirm("Удалить услугу?")) return;
+        try {
+            const res = await fetch(`/services/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                fetchServices();
+            } else {
+                alert("Ошибка удаления");
+            }
+        } catch (e) {
+            alert(e);
+        }
+    }
+    
+    async function saveService() {
+        const id = document.getElementById('service-id').value;
+        const name = document.getElementById('service-name-input').value;
+        const price = parseInt(document.getElementById('service-price-input').value);
+        const duration = parseInt(document.getElementById('service-duration-input').value);
+        const master_id = document.getElementById('service-master-input').value || null;
+        
+        if (!name || !price || !duration) {
+            alert("Заполните все поля");
+            return;
+        }
+        
+        const payload = { name, price, duration_minutes: duration, master_id };
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/services/${id}` : '/services';
+        
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            
+            if (res.ok) {
+                closeServiceModal();
+                fetchServices();
+            } else {
+                alert("Ошибка сохранения");
+            }
+        } catch (e) {
+            alert(e);
+        }
+    }
+
     function renderBarbers() {
         const container = document.getElementById('barbers-list');
         container.innerHTML = '';
@@ -892,6 +1085,7 @@
         document.getElementById('barber-spec-input').value = "";
         document.getElementById('barber-exp-input').value = "";
         document.getElementById('barber-tg-input').value = "";
+        document.getElementById('barber-photo-input').value = "";
         document.getElementById('barber-modal').classList.remove('hidden');
     }
     
@@ -905,6 +1099,7 @@
         document.getElementById('barber-spec-input').value = b.specialty || "";
         document.getElementById('barber-exp-input').value = b.experience || "";
         document.getElementById('barber-tg-input').value = b.telegram_id || "";
+        document.getElementById('barber-photo-input').value = b.photo_url || "";
         document.getElementById('barber-modal').classList.remove('hidden');
     }
     
@@ -918,7 +1113,8 @@
             name: document.getElementById('barber-name-input').value,
             specialty: document.getElementById('barber-spec-input').value,
             experience: document.getElementById('barber-exp-input').value,
-            telegram_id: document.getElementById('barber-tg-input').value
+            telegram_id: document.getElementById('barber-tg-input').value,
+            photo_url: document.getElementById('barber-photo-input').value
         };
         
         if (!data.name) {

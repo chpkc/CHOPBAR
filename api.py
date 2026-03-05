@@ -81,6 +81,18 @@ class BarberUpdate(BaseModel):
     telegram_id: Optional[str] = None
     photo_url: Optional[str] = None
 
+class ServiceCreate(BaseModel):
+    name: str
+    price: int
+    duration_minutes: int
+    master_id: Optional[str] = None  # If null, applies to all? Or just specific master.
+
+class ServiceUpdate(BaseModel):
+    name: Optional[str] = None
+    price: Optional[int] = None
+    duration_minutes: Optional[int] = None
+    master_id: Optional[str] = None
+
 # --- NOTIFICATION HELPERS ---
 async def send_telegram_message(token: str, chat_id: Union[str, int], text: str):
     if not token or not chat_id:
@@ -311,23 +323,32 @@ async def chat(request: ChatRequest):
 
 @app.post("/booking")
 async def create_booking(booking: BookingModel):
-    booking_data = booking.dict()
-    
-    # Generate UUID for the booking
-    booking_data["id"] = str(uuid.uuid4())
-    # Ensure telegram_id is string for Supabase
-    booking_data["telegram_id"] = str(booking_data["telegram_id"])
-    
-    if supabase:
-        try:
-            response = supabase.table("bookings").insert(booking_data).execute()
-            # If successful, return the data from DB
-            return {"status": "success", "data": response.data[0]}
-        except Exception as e:
-            print(f"Supabase error: {e}")
-            return JSONResponse(status_code=500, content={"error": "Database error", "details": str(e)})
-    else:
+    if not supabase:
         return JSONResponse(status_code=503, content={"error": "Database not configured"})
+
+    try:
+        data = booking.dict()
+        data['id'] = str(uuid.uuid4())
+        data['status'] = 'new'
+        data['created_at'] = datetime.datetime.now(pavlodar_tz).isoformat()
+        data['telegram_id'] = str(data['telegram_id'])
+        
+        # Save to DB
+        res = supabase.table('bookings').insert(data).execute()
+        
+        # NOTIFICATIONS
+        # 1. Notify Master
+        master = supabase.table('barbers').select('telegram_id').eq('name', booking.master).execute()
+        if master.data and master.data[0].get('telegram_id'):
+              master_tg = master.data[0]['telegram_id']
+              text = f"📅 Новая запись!\nУслуга: {booking.service}\nДата: {booking.date}\nВремя: {booking.time}\nКлиент ID: {booking.telegram_id}"
+              # Send to BARBER bot, not client bot
+              await send_telegram_message(BARBER_BOT_TOKEN, master_tg, text)
+
+        return {"success": True, "booking": res.data[0]}
+    except Exception as e:
+        print(f"Error creating booking: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.get("/admin/bookings")
 async def get_admin_bookings():
@@ -449,6 +470,97 @@ async def delete_booking(booking_id: str):
             return JSONResponse(status_code=500, content={"error": str(e)})
     else:
         return JSONResponse(status_code=503, content={"error": "Database not configured"})
+
+# --- SERVICES API ---
+@app.get("/services")
+async def get_services(master_id: Optional[str] = None):
+    if not supabase:
+        # Fallback to JSON if no DB
+        data = load_barbershop_data()
+        return data.get("services", [])
+        
+    try:
+        query = supabase.table("services").select("*")
+        if master_id:
+            # If master_id is provided, get services for this master OR global services (master_id is null)
+            # Supabase doesn't support complex OR easily in one go without raw sql or specific syntax.
+            # Simplified: just return all for now or filter client side.
+            # Or use .or_(f"master_id.eq.{master_id},master_id.is.null")
+            query = query.or_(f"master_id.eq.{master_id},master_id.is.null")
+        
+        response = query.order("price").execute()
+        return response.data
+    except Exception as e:
+        print(f"Error fetching services: {e}")
+        # Fallback
+        return load_barbershop_data().get("services", [])
+
+@app.post("/services")
+async def create_service(service: ServiceCreate):
+    if not supabase: return {"error": "DB not connected"}
+    try:
+        data = service.dict()
+        res = supabase.table("services").insert(data).execute()
+        return res.data[0]
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.put("/services/{id}")
+async def update_service(id: int, service: ServiceUpdate):
+    if not supabase: return {"error": "DB not connected"}
+    try:
+        data = {k: v for k, v in service.dict().items() if v is not None}
+        res = supabase.table("services").update(data).eq("id", id).execute()
+        return res.data
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.delete("/services/{id}")
+async def delete_service(id: int):
+    if not supabase: return {"error": "DB not connected"}
+    try:
+        supabase.table("services").delete().eq("id", id).execute()
+        return {"success": True}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.delete("/bookings/{id}")
+async def cancel_booking(id: str):
+    if not supabase: return {"error": "DB not configured"}
+    try:
+        # Get booking details before deleting to notify master
+        booking_res = supabase.table('bookings').select('*').eq('id', id).execute()
+        if booking_res.data:
+            b = booking_res.data[0]
+            # Notify master if we have their telegram_id
+            master = supabase.table('barbers').select('telegram_id').eq('name', b['master']).execute()
+            if master.data and master.data[0]['telegram_id']:
+                text = f"❌ Запись отменена\nКлиент: {b.get('client_name', 'ID: '+str(b['telegram_id']))}\nДата: {b['date']}\nВремя: {b['time']}\nУслуга: {b['service']}"
+                await send_telegram_message(BARBER_BOT_TOKEN, master.data[0]['telegram_id'], text)
+
+        supabase.table('bookings').delete().eq('id', id).execute()
+        return {"success": True}
+    except Exception as e:
+        print(f"Error cancelling booking: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/bookings/user")
+async def get_user_bookings(telegram_id: str):
+    if not supabase: return []
+    try:
+        # Get active bookings for user
+        res = supabase.table('bookings')\
+            .select('*')\
+            .eq('telegram_id', telegram_id)\
+            .neq('status', 'cancelled')\
+            .gte('date', datetime.datetime.now(pavlodar_tz).date().isoformat())\
+            .order('date')\
+            .order('time')\
+            .execute()
+        return res.data
+    except Exception as e:
+        print(f"Error fetching user bookings: {e}")
+        return []
 
 # --- BARBER API ---
 @app.get("/bookings/master-by-id")

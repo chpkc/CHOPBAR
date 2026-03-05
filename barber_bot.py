@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Bot, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from supabase import create_client, Client
+from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
 
 # Load environment variables
 load_dotenv()
@@ -55,19 +56,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             
         barber_name = result.data[0]['name']
         
+        if not MINI_APP_URL:
+            await update.message.reply_text("Ошибка: URL приложения не настроен.")
+            return
+
         # Construct Barber App URL
-        app_url = MINI_APP_URL
-        if app_url:
-            if not app_url.endswith('/'): app_url += '/'
-            if not app_url.endswith('barber/'): 
-                if 'barber' not in app_url: app_url += 'barber'
+        # Ensure we point to /barber endpoint of our API
+        parsed_url = urlparse(MINI_APP_URL)
+        path = parsed_url.path.rstrip('/')
+        if not path.endswith('/barber'):
+            path += '/barber'
         
-        # Add master_id query param
-        # Check if URL already has params
-        if '?' in app_url:
-             app_url = f"{app_url}&master_id={user_id}"
-        else:
-             app_url = f"{app_url}?master_id={user_id}"
+        # Add master_id query param cleanly
+        query_params = dict(parse_qsl(parsed_url.query))
+        query_params['master_id'] = user_id
+        
+        new_url_parts = list(parsed_url)
+        new_url_parts[2] = path
+        new_url_parts[4] = urlencode(query_params)
+        app_url = urlunparse(new_url_parts)
+        
+        logger.info(f"Generated WebApp URL: {app_url}")
         
         kb = [[KeyboardButton("✂️ Открыть рабочий стол", web_app=WebAppInfo(url=app_url))]]
         

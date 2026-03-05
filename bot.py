@@ -93,6 +93,7 @@ async def check_and_notify(bot):
                 
                 # 2h reminder (1.5 to 2.5 hours before)
                 if 1.5 <= hours <= 2.5 and not b.get('notified_2h'):
+                    # Notify Client
                     await bot.send_message(
                         chat_id=b['telegram_id'],
                         text=(
@@ -102,10 +103,53 @@ async def check_and_notify(bot):
                             f"До встречи в CHOP! 💈"
                         )
                     )
+                    
+                    # Notify Master
+                    master = supabase.table('barbers').select('telegram_id').eq('name', b['master']).execute()
+                    if master.data and master.data[0].get('telegram_id'):
+                         master_tg = master.data[0]['telegram_id']
+                         # Use BARBER_BOT_TOKEN for master notification
+                         # We need to import it or use bot instance if they share token? 
+                         # They don't. bot.py uses BOT_TOKEN.
+                         # Let's use a separate Bot instance for master notifications if token differs.
+                         from telegram import Bot
+                         barber_bot = Bot(token=os.getenv("BARBER_BOT_TOKEN"))
+                         await barber_bot.send_message(
+                             chat_id=master_tg,
+                             text=(
+                                 f"⏰ Напоминание: через 2 часа запись!\n"
+                                 f"Клиент ID: {b['telegram_id']}\n"
+                                 f"Время: {b['time']}\n"
+                                 f"Услуга: {b['service']}"
+                             )
+                         )
+
                     supabase.table('bookings')\
                         .update({'notified_2h': True})\
                         .eq('id', b['id']).execute()
                         
+                # 30 min reminder (0.4 to 0.6 hours before)
+                if 0.4 <= hours <= 0.6 and not b.get('notified_30m'):
+                     # Notify Master
+                    master = supabase.table('barbers').select('telegram_id').eq('name', b['master']).execute()
+                    if master.data and master.data[0].get('telegram_id'):
+                         master_tg = master.data[0]['telegram_id']
+                         from telegram import Bot
+                         barber_bot = Bot(token=os.getenv("BARBER_BOT_TOKEN"))
+                         await barber_bot.send_message(
+                             chat_id=master_tg,
+                             text=(
+                                 f"⚠️ Через 30 минут запись!\n"
+                                 f"Клиент ID: {b['telegram_id']}\n"
+                                 f"Время: {b['time']}\n"
+                                 f"Услуга: {b['service']}"
+                             )
+                         )
+                    
+                    supabase.table('bookings')\
+                        .update({'notified_30m': True})\
+                        .eq('id', b['id']).execute()
+
             except Exception as e:
                 logger.error(f"Reminder error for booking {b.get('id')}: {e}")
                 

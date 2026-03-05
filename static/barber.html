@@ -477,7 +477,17 @@
         masterId = params.get('master_id') || (tgUser ? String(tgUser.id) : null);
         
         if (!masterId) {
-            document.getElementById('bookings-list').innerHTML = '<div class="loading">Ошибка: Запустите через Telegram (нет master_id)</div>';
+            const debugInfo = `
+                <div style="font-size: 10px; color: red; margin-top: 10px; text-align: left;">
+                    Debug Info:<br>
+                    URL: ${window.location.href}<br>
+                    Params: ${params.toString()}<br>
+                    TG User: ${tgUser ? JSON.stringify(tgUser) : 'undefined'}<br>
+                    InitData: ${window.Telegram?.WebApp?.initData ? 'present' : 'missing'}
+                </div>
+            `;
+            document.getElementById('bookings-list').innerHTML = 
+                '<div class="loading">Ошибка: Запустите через Telegram (нет master_id)</div>' + debugInfo;
             return;
         }
         

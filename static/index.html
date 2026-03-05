@@ -882,13 +882,13 @@
         </div>
 
         <div class="stats-row stagger-item">
+            <div class="stat-item clickable" onclick="navigateTo('my-bookings-screen')">
+                <span class="stat-num" id="my-bookings-count">0</span>
+                <span class="stat-label">Мои записи</span>
+            </div>
             <div class="stat-item">
                 <span class="stat-num" id="masters-count">3</span>
                 <span class="stat-label">Мастера</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-num">5</span>
-                <span class="stat-label">Услуг</span>
             </div>
             <div class="stat-item">
                 <span class="stat-num">пн-сб</span>
@@ -912,6 +912,18 @@
             <div id="services-preview-list" class="services-grid">
                 <!-- Populated via JS -->
             </div>
+        </div>
+    </div>
+
+    <!-- MY BOOKINGS SCREEN -->
+    <div id="my-bookings-screen" class="screen">
+        <div class="hero-section" style="padding-bottom: 20px;">
+            <button class="back-btn" onclick="navigateBack()">← НАЗАД</button>
+            <h2 class="step-title">МОИ ЗАПИСИ</h2>
+        </div>
+        
+        <div id="my-bookings-list" class="list-container" style="padding: 20px; overflow-y: auto;">
+            <!-- Populated via JS -->
         </div>
     </div>
 
@@ -1044,16 +1056,8 @@
 
     // --- DATA ---
     let barbers = [];
-
-    const services = [
-        { name: "Мужская стрижка", price: 1200, duration: 45, id: "haircut" },
-        { name: "Стрижка + борода", price: 1800, duration: 75, id: "full" },
-        { name: "Оформление бороды", price: 800, duration: 30, id: "beard" },
-        { name: "Детская стрижка", price: 900, duration: 35, id: "kids" },
-        { name: "Укладка", price: 600, duration: 20, id: "style" }
-    ];
-
-    const times = ["10:00", "10:30", "11:00", "11:30", "12:00", "13:00", "14:00", "14:30", "15:00", "16:00", "17:00", "17:30", "18:00", "19:00", "19:30"];
+    let services = []; // Dynamic now
+    let myBookings = [];
 
     // --- STATE ---
     let booking = {
@@ -1071,16 +1075,19 @@
 
     // --- INIT ---
     async function init() {
-        await loadBarbers();
+        // Fetch user bookings first to show "My Bookings" button if needed
+        await loadMyBookings();
+        
+        await Promise.all([loadBarbers(), loadServices()]);
 
         renderBarberList('masters-preview-list', barbers, false);
-        renderServicesGrid('services-preview-list', services, false);
+        // renderServicesGrid('services-preview-list', services, false); // Maybe limit to top 3?
         
         renderBarberList('masters-list', barbers, true);
         renderServicesGrid('services-list', services, true);
         
+        // Initial Date Render
         renderDates();
-        renderTimes();
         
         // Trigger initial animation for home screen
         animateContent('home-screen');
@@ -1090,22 +1097,133 @@
         try {
             const res = await fetch('/barbers');
             const data = await res.json();
-            // Map data to match frontend format if needed
-            // DB: id, name, specialty, experience, photo_url, telegram_id
-            // Frontend expects: name, specialty, experience, id, bg (optional)
+            // Map data to match frontend format
             barbers = data.map(b => ({
                 name: sanitizeText(b.name),
                 specialty: sanitizeText(b.specialty || "Мастер"),
                 experience: sanitizeText(b.experience || ""),
                 id: b.id,
-                bg: "#1A1208", // Default dark bg
-                // Use photo_url if we implement images later
+                bg: "#1A1208", 
+                photo: b.photo_url || null,
+                telegram_id: b.telegram_id
             }));
             
             const mastersCountEl = document.getElementById('masters-count');
             if (mastersCountEl) mastersCountEl.innerText = String(barbers.length);
         } catch (e) {
             console.error("Failed to load barbers", e);
+        }
+    }
+
+    async function loadServices() {
+        try {
+            const res = await fetch('/services');
+            const data = await res.json();
+            services = data.map(s => ({
+                name: sanitizeText(s.name),
+                price: s.price,
+                duration: s.duration_minutes,
+                id: s.id,
+                master_id: s.master_id
+            }));
+        } catch (e) {
+            console.error("Failed to load services", e);
+            // Fallback
+            services = [
+                { name: "Мужская стрижка", price: 3000, duration: 45, id: "haircut" },
+            ];
+        }
+    }
+    
+    async function loadMyBookings() {
+        const user = window.Telegram.WebApp.initDataUnsafe.user;
+        if (!user) return;
+        
+        try {
+            // Updated endpoint: we need to filter by telegram_id in API
+            // Currently API has /bookings/master-by-id, we need /bookings/user
+            // Let's assume we add it or use a query
+            // Since we don't have a dedicated user bookings endpoint yet, let's add it to API first?
+            // Or we can assume it exists. Let's create it in API next.
+            const res = await fetch(`/bookings/user?telegram_id=${user.id}`);
+            if (res.ok) {
+                myBookings = await res.json();
+                updateMyBookingsUI();
+                renderMyBookings();
+            }
+        } catch (e) {
+            console.error("Failed to load my bookings", e);
+        }
+    }
+    
+    function updateMyBookingsUI() {
+        const countEl = document.getElementById('my-bookings-count');
+        if (countEl) countEl.innerText = myBookings.length;
+    }
+    
+    function renderMyBookings() {
+        const container = document.getElementById('my-bookings-list');
+        if (!container) return;
+        container.innerHTML = '';
+        
+        if (myBookings.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:40px;">Нет активных записей</div>';
+            return;
+        }
+        
+        myBookings.forEach(b => {
+            const el = document.createElement('div');
+            el.className = 'summary-card'; // Reuse style
+            el.style.marginBottom = '16px';
+            
+            // Format date
+            const d = new Date(b.date);
+            const dateStr = d.toLocaleDateString('ru-RU', {day:'numeric', month:'long'});
+            
+            el.innerHTML = `
+                <div class="summary-row">
+                    <span class="summary-label">ДАТА</span>
+                    <span class="summary-val">${dateStr}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">ВРЕМЯ</span>
+                    <span class="summary-val">${b.time}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">МАСТЕР</span>
+                    <span class="summary-val">${sanitizeText(b.master)}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">УСЛУГА</span>
+                    <span class="summary-val">${sanitizeText(b.service)}</span>
+                </div>
+                 <div class="summary-row">
+                    <span class="summary-label">ЦЕНА</span>
+                    <span class="summary-val" style="color:var(--accent-gold)">${b.price}₸</span>
+                </div>
+                
+                <button class="btn-secondary" style="width:100%; margin-top:16px; border-color:#ff4d4d; color:#ff4d4d;" onclick="cancelUserBooking('${b.id}')">
+                    ОТМЕНИТЬ ЗАПИСЬ
+                </button>
+            `;
+            container.appendChild(el);
+        });
+    }
+    
+    async function cancelUserBooking(id) {
+        if(!confirm("Вы уверены, что хотите отменить запись?")) return;
+        
+        try {
+            const res = await fetch(`/bookings/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                // Refresh
+                await loadMyBookings();
+                alert("Запись отменена");
+            } else {
+                alert("Ошибка отмены");
+            }
+        } catch (e) {
+            alert("Ошибка сети");
         }
     }
 
@@ -1125,11 +1243,17 @@
             const el = document.createElement('div');
             el.className = 'barber-item stagger-item';
             
-            // Avatar initials
-            const initials = item.name.substring(0,2).toUpperCase();
+            // Avatar initials or Image
+            let avatarHtml = '';
+            if (item.photo) {
+                avatarHtml = `<div class="avatar" style="background-image: url('${item.photo}'); background-size: cover; background-position: center;"></div>`;
+            } else {
+                const initials = item.name.substring(0,2).toUpperCase();
+                avatarHtml = `<div class="avatar" style="background-color: ${item.bg}">${initials}</div>`;
+            }
 
             el.innerHTML = `
-                <div class="avatar" style="background-color: ${item.bg}">${initials}</div>
+                ${avatarHtml}
                 <div class="item-info">
                     <span class="item-title">${sanitizeText(item.name)}</span>
                     <span class="item-subtitle">${sanitizeText(item.specialty)}</span>
@@ -1149,7 +1273,19 @@
         const container = document.getElementById(containerId);
         container.innerHTML = '';
         
-        data.forEach((item, index) => {
+        // Filter services if master is selected
+        let filtered = data;
+        if (booking.master && booking.master.telegram_id) {
+             // Show global services (master_id is null) OR services for this master
+             filtered = data.filter(s => !s.master_id || String(s.master_id) === String(booking.master.telegram_id));
+        }
+        
+        if (filtered.length === 0) {
+            container.innerHTML = '<div style="color:var(--text-muted); padding:20px; text-align:center;">Нет доступных услуг</div>';
+            return;
+        }
+
+        filtered.forEach((item, index) => {
             const el = document.createElement('div');
             el.className = 'service-card stagger-item';
             el.id = `service-${item.id}`; // Add ID for selection logic
