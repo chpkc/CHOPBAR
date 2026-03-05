@@ -547,10 +547,8 @@
 
         function sanitizeText(str) {
             if (!str) return '';
+            // Only trim and basic escape, no censorship
             let s = String(str).replace(/[<>]/g, '').trim();
-            const banned = [/хуй/i, /секс/i, /анал/i];
-            if (banned.some(rx => rx.test(s))) return '-';
-            if (s.length > 64) s = s.slice(0, 64) + '…';
             return s;
         }
 

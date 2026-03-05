@@ -222,9 +222,18 @@
     let allBookings = [];
 
     async function init() {
-        const userId = tg.initDataUnsafe?.user?.id;
+        // Try to get ID from Telegram WebApp
+        let userId = tg.initDataUnsafe?.user?.id;
+        
+        // DEBUG: If not in Telegram (local testing), use a default ID or ask user
         if (!userId) {
-            document.getElementById('bookings-list').innerHTML = '<div class="loading">Ошибка: Запустите через Telegram</div>';
+            console.warn("No Telegram user ID found. Are you running outside Telegram?");
+            // For debugging purposes, you can uncomment this line to test with a specific ID:
+            // userId = 1396316823; // Altair's ID
+        }
+
+        if (!userId) {
+            document.getElementById('bookings-list').innerHTML = '<div class="loading">Ошибка: Запустите через Telegram </div>';
             return;
         }
         
@@ -234,13 +243,15 @@
             const data = await res.json();
             
             if (data.error) {
-                document.body.innerHTML = `<div class="loading" style="color:red">⛔️ ${data.error}</div>`;
+                document.getElementById('bookings-list').innerHTML = `<div class="loading" style="color:red">⛔️ ${data.error}</div>`;
                 return;
             }
             
             barberName = data.name.trim(); // Ensure no trailing spaces
             document.getElementById('barber-name').innerText = barberName;
             
+            // Switch to 'all' tab by default to see all bookings first (for debugging)
+            // switchTab('all'); 
             fetchBookings();
         } catch (e) {
             console.error(e);
