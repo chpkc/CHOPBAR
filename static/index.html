@@ -1345,36 +1345,46 @@
         const container = document.getElementById('time-grid');
         container.innerHTML = '';
         
+        // Get current time
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        
+        // Check if selected date is today
+        let isToday = false;
+        if (booking.date) {
+            const d = new Date(booking.date);
+            isToday = d.getDate() === now.getDate() && 
+                      d.getMonth() === now.getMonth() && 
+                      d.getFullYear() === now.getFullYear();
+        }
+
         times.forEach(time => {
             const isOccupied = occupiedSlots.includes(time);
             
-            const el = document.createElement('div');
-            // If re-rendering (occupiedSlots provided), we want to show immediately
-            // But if initial render (occupiedSlots is empty/undefined), we might want animation?
-            // Actually, renderTimes is called in init() too.
-            // If we use 'show' class, it won't stagger.
-            // But initial render is handled by animateContent().
-            // So we should NOT add 'show' by default unless it's a re-render.
-            // But 'occupiedSlots' is [] initially.
-            // Let's check if container has children? No.
-            // Let's just use 'stagger-item'. If we are in 'init', animateContent will show them.
-            // If we are in 'selectDate', the screen is already visible. animateContent won't run again (due to my fix).
-            // So we need to manually show them or add 'show' class.
-            // Since 'selectDate' re-renders, we want them to appear immediately or stagger in.
-            // Let's add 'show' class always, and let animateContent override/reset if needed?
-            // No, animateContent removes 'show'.
-            // If I add 'show', animateContent will see them as already shown? No, it removes 'show' first.
-            // So adding 'show' is safe for init(), as animateContent will reset it.
-            // And for re-render, it ensures visibility.
+            // Check if time is past (only if today)
+            let isPast = false;
+            if (isToday) {
+                const [h, m] = time.split(':').map(Number);
+                if (h < currentHour || (h === currentHour && m < currentMinute)) {
+                    isPast = true;
+                }
+            }
             
+            const el = document.createElement('div');
             el.className = 'time-slot stagger-item show'; 
             
-            if (isOccupied) {
+            if (isOccupied || isPast) {
                 el.style.background = '#E8DFC8';
                 el.style.color = '#C0B090';
                 el.style.cursor = 'not-allowed';
                 el.style.pointerEvents = 'none';
-                el.innerHTML = `${time}<br><span style="font-size:10px; color:#8A7A5E">занято</span>`;
+                
+                if (isPast) {
+                     el.innerHTML = `${time}<br><span style="font-size:10px; color:#8A7A5E">прошло</span>`;
+                } else {
+                     el.innerHTML = `${time}<br><span style="font-size:10px; color:#8A7A5E">занято</span>`;
+                }
             } else {
                 el.innerText = time;
                 el.onclick = (e) => selectTime(e.currentTarget, time);

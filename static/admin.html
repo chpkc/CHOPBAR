@@ -1204,7 +1204,8 @@
             time: document.getElementById('booking-time-input').value,
             price: parseInt(document.getElementById('booking-price-input').value),
             duration: 45, // Default
-            telegram_id: document.getElementById('booking-client-input').value // Using client name as ID for manual entry or just string
+            telegram_id: document.getElementById('booking-client-input').value, // Using client name as ID for manual entry or just string
+            force: true // Allow past bookings for admin
         };
         
         if (!data.master || !data.service || !data.date || !data.time || !data.price || !data.telegram_id) {

@@ -67,6 +67,7 @@ class BookingModel(BaseModel):
     time: str
     duration: int
     telegram_id: Union[str, int] # Allow int or str
+    force: Optional[bool] = False # Allow admins to bypass validation
 
 class BarberCreate(BaseModel):
     name: str
@@ -328,7 +329,22 @@ async def create_booking(booking: BookingModel):
         return JSONResponse(status_code=503, content={"error": "Database not configured"})
 
     try:
-        data = booking.dict()
+        # Validate time is not in past
+        if not booking.force:
+            try:
+                booking_dt = datetime.datetime.strptime(f"{booking.date} {booking.time}", "%Y-%m-%d %H:%M")
+                # Assign timezone to booking_dt to make it aware (assuming input is in local time, which implies pavlodar time)
+                booking_dt = booking_dt.replace(tzinfo=pavlodar_tz)
+                
+                now = datetime.datetime.now(pavlodar_tz)
+                if booking_dt < now:
+                     return JSONResponse(status_code=400, content={"error": "Нельзя записаться на прошедшее время"})
+            except ValueError:
+                # Date/time format error, let it pass to DB or fail there? 
+                # Better to fail here if we can't parse.
+                pass
+
+        data = booking.dict(exclude={'force'}) # Exclude force from DB insert
         data['id'] = str(uuid.uuid4())
         data['status'] = 'new'
         data['created_at'] = datetime.datetime.now(pavlodar_tz).isoformat()
