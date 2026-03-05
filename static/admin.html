@@ -651,12 +651,17 @@
     async function fetchBookings(silent = false) {
         if(!silent) document.getElementById('loading').classList.remove('hidden');
         try {
+            console.log("Fetching bookings...");
             const res = await fetch('/admin/bookings', { cache: "no-store" });
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
             bookingsData = await res.json();
+            console.log("Bookings loaded:", bookingsData.length);
+            
             updateStats();
             if(!silent) renderBookings();
         } catch (e) {
-            console.error(e);
+            console.error("Error loading bookings:", e);
+            document.getElementById('bookings-list').innerHTML = `<div class="loading" style="color:red">Ошибка: ${e.message}</div>`;
         } finally {
             if(!silent) document.getElementById('loading').classList.add('hidden');
         }

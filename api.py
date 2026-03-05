@@ -329,6 +329,17 @@ async def create_booking(booking: BookingModel):
     else:
         return JSONResponse(status_code=503, content={"error": "Database not configured"})
 
+@app.get("/admin/bookings")
+async def get_admin_bookings():
+    if not supabase: return []
+    try:
+        # Fetch all bookings for admin panel
+        response = supabase.table("bookings").select("*").order("date", desc=True).order("time", desc=True).execute()
+        return response.data
+    except Exception as e:
+        print(f"Error fetching admin bookings: {e}")
+        return []
+
 @app.get("/bookings")
 async def get_bookings():
     if supabase:
