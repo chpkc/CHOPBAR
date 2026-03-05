@@ -883,7 +883,7 @@
 
         <div class="stats-row stagger-item">
             <div class="stat-item">
-                <span class="stat-num">3</span>
+                <span class="stat-num" id="masters-count">3</span>
                 <span class="stat-label">Мастера</span>
             </div>
             <div class="stat-item">
@@ -1094,16 +1094,29 @@
             // DB: id, name, specialty, experience, photo_url, telegram_id
             // Frontend expects: name, specialty, experience, id, bg (optional)
             barbers = data.map(b => ({
-                name: b.name,
-                specialty: b.specialty || "Мастер",
-                experience: b.experience || "",
+                name: sanitizeText(b.name),
+                specialty: sanitizeText(b.specialty || "Мастер"),
+                experience: sanitizeText(b.experience || ""),
                 id: b.id,
                 bg: "#1A1208", // Default dark bg
                 // Use photo_url if we implement images later
             }));
+            
+            const mastersCountEl = document.getElementById('masters-count');
+            if (mastersCountEl) mastersCountEl.innerText = String(barbers.length);
         } catch (e) {
             console.error("Failed to load barbers", e);
         }
+    }
+
+    function sanitizeText(str) {
+        if (!str) return '';
+        let s = String(str).replace(/[<>]/g, '').trim();
+        const banned = [/хуй/i, /секс/i, /анал/i];
+        if (banned.some(rx => rx.test(s))) return '-';
+        // Limit length
+        if (s.length > 64) s = s.slice(0, 64) + '…';
+        return s;
     }
 
     // --- RENDERERS ---
@@ -1121,10 +1134,10 @@
             el.innerHTML = `
                 <div class="avatar" style="background-color: ${item.bg}">${initials}</div>
                 <div class="item-info">
-                    <span class="item-title">${item.name}</span>
-                    <span class="item-subtitle">${item.specialty}</span>
+                    <span class="item-title">${sanitizeText(item.name)}</span>
+                    <span class="item-subtitle">${sanitizeText(item.specialty)}</span>
                 </div>
-                <div class="item-meta">${item.experience}</div>
+                <div class="item-meta">${sanitizeText(item.experience)}</div>
             `;
             
             if (isInteractive) {

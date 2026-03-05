@@ -545,6 +545,15 @@
             return;
         }
 
+        function sanitizeText(str) {
+            if (!str) return '';
+            let s = String(str).replace(/[<>]/g, '').trim();
+            const banned = [/хуй/i, /секс/i, /анал/i];
+            if (banned.some(rx => rx.test(s))) return '-';
+            if (s.length > 64) s = s.slice(0, 64) + '…';
+            return s;
+        }
+
         allBarbers.forEach(b => {
             const el = document.createElement('div');
             el.className = 'barber-row';
@@ -556,13 +565,13 @@
                 <div class="barber-info">
                     <div class="avatar">${initials}</div>
                     <div class="barber-details">
-                        <span class="barber-name">${b.name}</span>
-                        <span class="barber-spec">${b.specialty || '-'}</span>
+                        <span class="barber-name">${sanitizeText(b.name)}</span>
+                        <span class="barber-spec">${sanitizeText(b.specialty || '-')}</span>
                         <span class="barber-tg">ID: ${tgDisplay}</span>
                     </div>
                 </div>
                 <div class="barber-meta">
-                    <div class="barber-exp">${b.experience || '-'}</div>
+                    <div class="barber-exp">${sanitizeText(b.experience || '-')}</div>
                     <div class="barber-actions">
                         <button class="icon-btn" onclick='showEditForm(${JSON.stringify(b)})'>✏️</button>
                         <button class="icon-btn" onclick="deleteBarber('${b.id}', '${b.name}')">🗑</button>
