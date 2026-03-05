@@ -598,10 +598,6 @@
             });
         }
         
-        // Sort: Active first, then by time
-        // Actually, newspaper style usually strictly chronological
-        filtered.sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
-        
         if (filtered.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
@@ -613,16 +609,42 @@
             return;
         }
 
+        // Logic for "Today": Split Active vs Done
+        if (currentTab === 'today') {
+            const active = filtered.filter(b => b.status === 'new');
+            const done = filtered.filter(b => b.status !== 'new');
+            
+            // Sort active ASC (earliest first)
+            active.sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
+            // Sort done DESC (most recent finished first) - helps to see what was just done
+            done.sort((a, b) => new Date(b.date + 'T' + b.time) - new Date(a.date + 'T' + a.time));
+            
+            if (active.length > 0) {
+                const header = document.createElement('div');
+                header.className = 'date-section-header';
+                header.innerText = 'ОЖИДАЮТ';
+                container.appendChild(header);
+                active.forEach(b => container.appendChild(createBookingEl(b)));
+            }
+            
+            if (done.length > 0) {
+                const header = document.createElement('div');
+                header.className = 'date-section-header';
+                header.style.marginTop = '20px';
+                header.style.opacity = '0.6';
+                header.innerText = 'ЗАВЕРШЕННЫЕ';
+                container.appendChild(header);
+                done.forEach(b => container.appendChild(createBookingEl(b)));
+            }
+            
+            return;
+        }
+
+        // Logic for Week/All: Chronological
+        filtered.sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
+        
         let lastDate = null;
-
-        filtered.forEach((b, index) => {
-            const isDone = b.status === 'done';
-            const isCancelled = b.status === 'cancelled';
-            let rowClass = '';
-            if (isDone) rowClass = 'status-done';
-            if (isCancelled) rowClass = 'status-cancelled';
-
-            // Date Section Header (for grouping)
+        filtered.forEach(b => {
             if (b.date !== lastDate) {
                  const dateHeader = document.createElement('div');
                  dateHeader.className = 'date-section-header';
@@ -630,41 +652,49 @@
                  container.appendChild(dateHeader);
                  lastDate = b.date;
             }
-
-            const el = document.createElement('div');
-            el.className = `booking-row ${rowClass}`;
-            el.style.animationDelay = `${index * 40}ms`;
-            
-            const dateDisplay = formatDate(b.date) + ' · ' + b.time;
-            const priceDisplay = (b.price || 0).toLocaleString('ru-RU');
-            
-            let statusLabel = '';
-            if (isDone) statusLabel = '— ВЫПОЛНЕНО ✓';
-            if (isCancelled) statusLabel = '— ОТМЕНЕНО';
-
-            el.innerHTML = `
-                <div class="date-strip ${isDone ? 'done' : ''} ${isCancelled ? 'cancelled' : ''}">
-                    <span class="date-text">${dateDisplay} ${statusLabel}</span>
-                    <span class="price-text">${priceDisplay} <span class="currency">₸</span></span>
-                </div>
-                <div class="info-row">
-                    <span class="label">Клиент</span>
-                    <span class="value">
-                        ${b.client_name || 'Клиент'} 
-                        <span class="username">${b.username ? '(@' + b.username + ')' : ''}</span>
-                    </span>
-                </div>
-                <div class="info-row">
-                    <span class="label">Услуга</span>
-                    <span class="value">${b.service} · ${b.duration} мин</span>
-                </div>
-                <div class="action-row">
-                    <button class="btn btn-done" onclick="markDone('${b.id}')">✅ ВЫПОЛНЕНО</button>
-                    <button class="btn btn-cancel" onclick="cancelBooking('${b.id}')">❌ ОТМЕНИТЬ</button>
-                </div>
-            `;
-            container.appendChild(el);
+            container.appendChild(createBookingEl(b));
         });
+    }
+
+    function createBookingEl(b) {
+        const isDone = b.status === 'done';
+        const isCancelled = b.status === 'cancelled';
+        let rowClass = '';
+        if (isDone) rowClass = 'status-done';
+        if (isCancelled) rowClass = 'status-cancelled';
+
+        const el = document.createElement('div');
+        el.className = `booking-row ${rowClass}`;
+        
+        const dateDisplay = (currentTab === 'today' ? '' : formatDate(b.date) + ' · ') + b.time;
+        const priceDisplay = (b.price || 0).toLocaleString('ru-RU');
+        
+        let statusLabel = '';
+        if (isDone) statusLabel = '— ВЫПОЛНЕНО ✓';
+        if (isCancelled) statusLabel = '— ОТМЕНЕНО';
+
+        el.innerHTML = `
+            <div class="date-strip ${isDone ? 'done' : ''} ${isCancelled ? 'cancelled' : ''}">
+                <span class="date-text">${dateDisplay} ${statusLabel}</span>
+                <span class="price-text">${priceDisplay} <span class="currency">₸</span></span>
+            </div>
+            <div class="info-row">
+                <span class="label">Клиент</span>
+                <span class="value">
+                    ${b.client_name || 'Клиент'} 
+                    <span class="username">${b.username ? '(@' + b.username + ')' : ''}</span>
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="label">Услуга</span>
+                <span class="value">${b.service} · ${b.duration} мин</span>
+            </div>
+            <div class="action-row">
+                <button class="btn btn-done" onclick="markDone('${b.id}')">✅ ВЫПОЛНЕНО</button>
+                <button class="btn btn-cancel" onclick="cancelBooking('${b.id}')">❌ ОТМЕНИТЬ</button>
+            </div>
+        `;
+        return el;
     }
     
     async function markDone(id) {
