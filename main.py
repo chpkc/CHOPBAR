@@ -1,45 +1,83 @@
-import json
+import asyncio
+import logging
 import os
+from aiogram import Bot, Dispatcher
+from dotenv import load_dotenv
+from supabase import create_client, Client
+from notifications import setup_scheduler
+from partner_bot import router as partner_router
 
-def load_data():
-    with open('data/barbershop.json', 'r') as f:
-        return json.load(f)
+# Загружаем переменные окружения
+load_dotenv()
 
-def load_prompt():
-    with open('prompts/system_prompt.txt', 'r') as f:
-        return f.read()
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def format_prompt(prompt_template, data):
-    # Format barbers list
-    barbers_str = "\n".join([f"- {b['name']} ({b['specialty']}, {b['experience']})" for b in data['barbers']])
-    
-    # Format services list
-    services_str = "\n".join([f"- {s['name']}: {s['price']} ₸ ({s['duration_minutes']} min)" for s in data['services']])
-    
-    # Format hours
-    hours_list = []
-    for day, hours in data['hours'].items():
-        day_formatted = day.replace('_', '-').title()
-        hours_list.append(f"- {day_formatted}: {hours}")
-    hours_str = "\n".join(hours_list)
-    
-    # Replace placeholders
-    prompt = prompt_template.replace('{barbers}', barbers_str)
-    prompt = prompt.replace('{services}', services_str)
-    prompt = prompt.replace('{hours}', hours_str)
-    
-    return prompt
+# --- CONFIGURATION ---
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+PARTNER_BOT_TOKEN = os.getenv("PARTNER_BOT_TOKEN")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-def main():
-    data = load_data()
-    raw_prompt = load_prompt()
-    system_prompt = format_prompt(raw_prompt, data)
+async def run_client_bot(supabase: Client):
+    """Запуск основного клиентского бота и планировщика"""
+    if not BOT_TOKEN:
+        logger.error("BOT_TOKEN не найден в .env файле!")
+        return
+
+    bot = Bot(token=BOT_TOKEN)
+    dp = Dispatcher()
     
-    print("--- Generated System Prompt ---")
-    print(system_prompt)
-    print("\n--- Ready for LLM Integration ---")
-    # Here you would typically send this system_prompt to an LLM API (e.g., OpenAI, Anthropic)
-    # along with user messages.
+    logger.info("Setting up scheduler...")
+    scheduler = setup_scheduler(bot, supabase)
+    scheduler.start()
+
+    try:
+        logger.info("Client Bot is starting...")
+        # Сюда можно добавить подключение роутеров основного бота:
+        # dp.include_router(main_bot_router)
+        await dp.start_polling(bot)
+    finally:
+        logger.info("Shutting down Client Bot...")
+        scheduler.shutdown()
+        await bot.session.close()
+
+async def run_partner_bot():
+    """Запуск бота-партнера"""
+    if not PARTNER_BOT_TOKEN:
+        logger.error("PARTNER_BOT_TOKEN не найден в .env файле!")
+        return
+
+    bot = Bot(token=PARTNER_BOT_TOKEN)
+    dp = Dispatcher()
+    dp.include_router(partner_router)
+
+    try:
+        logger.info("Partner Bot is starting...")
+        await dp.start_polling(bot)
+    finally:
+        logger.info("Shutting down Partner Bot...")
+        await bot.session.close()
+
+async def main():
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        logger.error("Ключи Supabase не найдены в .env файле!")
+        return
+
+    logger.info("Connecting to database via Supabase client...")
+    try:
+        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        logger.error(f"Не удалось подключиться к БД: {e}")
+        return
+
+    # Запускаем обоих ботов параллельно
+    await asyncio.gather(
+        run_client_bot(supabase),
+        run_partner_bot()
+    )
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
+
