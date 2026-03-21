@@ -7,3 +7,4 @@ streamlit
 supabase
 apscheduler
 aiohttp
+aiogram>=3.4.1
