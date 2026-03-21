@@ -214,11 +214,11 @@ async def finish_registration(message_or_call, state: FSMContext, instagram_link
         success_msg = (
             "✅ Барбершоп подключён к CHOPBAR!\n\n"
             f"💈 Ссылка для клиентов:\n"
-            f"t.me/chopbar_bot?start={slug}\n\n"
-            f"👨‍💼 Ссылка для мастеров:\n"
-            f"t.me/chopbar_crew?start={slug}\n\n"
-            f"⚙️ Твоя админ-панель:\n"
             f"t.me/ChopPavlodarBot?start={slug}\n\n"
+            f"👨‍💼 Ссылка для мастеров:\n"
+            f"t.me/ChopCrewBot?start={slug}\n\n"
+            f"⚙️ Твоя админ-панель:\n"
+            f"t.me/ChopPavlodarAdminBot?start={slug}\n\n"
             "Сохрани эти ссылки — они твои навсегда."
         )
         
