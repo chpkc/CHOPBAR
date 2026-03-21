@@ -3,6 +3,7 @@ import logging
 import re
 import string
 import random
+import asyncio
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, Router, F
 from aiogram.filters import CommandStart, Command
