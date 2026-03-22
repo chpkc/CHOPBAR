@@ -442,7 +442,8 @@
     tg.ready();
     tg.expand();
 
-    const slug = tg.initDataUnsafe?.start_param || 'chop-pavlodar';
+    const urlParams = new URLSearchParams(window.location.search);
+    const slug = urlParams.get('slug') || tg.initDataUnsafe?.start_param || 'chop-pavlodar';
 
     let currentTab = 'today';
     let barberName = null;

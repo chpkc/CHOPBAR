@@ -40,30 +40,22 @@ async def start(message: types.Message):
     user_id = str(message.from_user.id)
     
     try:
-        result = supabase.table('barbers').select('*').eq('telegram_id', user_id).execute()
+        # Get barber and their shop slug
+        result = supabase.table('barbers').select('name, barbershop_id').eq('telegram_id', user_id).execute()
         
         if not result.data:
             await message.answer("⛔️ У вас нет доступа. Обратитесь к администратору.")
             return
             
         barber_name = result.data[0]['name']
+        shop_id = result.data[0]['barbershop_id']
         
-        if not MINI_APP_URL:
-            await message.answer("Ошибка: URL приложения не настроен.")
-            return
-
-        parsed_url = urlparse(MINI_APP_URL)
-        path = parsed_url.path.rstrip('/')
-        if not path.endswith('/barber'):
-            path += '/barber'
+        # Get slug
+        shop_res = supabase.table('barbershops').select('slug').eq('id', shop_id).execute()
+        slug = shop_res.data[0]['slug'] if shop_res.data else 'chop-pavlodar'
         
-        query_params = dict(parse_qsl(parsed_url.query))
-        query_params['master_id'] = user_id
-        
-        new_url_parts = list(parsed_url)
-        new_url_parts[2] = path
-        new_url_parts[4] = urlencode(query_params)
-        app_url = urlunparse(new_url_parts)
+        # URL to the actual Railway deployment with parameters
+        app_url = f"https://chopbar-production.up.railway.app/static/barber.html?master_id={user_id}&slug={slug}"
         
         logger.info(f"Generated WebApp URL: {app_url}")
         

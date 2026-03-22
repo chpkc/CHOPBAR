@@ -4,8 +4,10 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types, Router, F
-from aiogram.filters import Command
-from aiogram.types import MenuButtonWebApp, WebAppInfo
+from aiogram.filters import Command, CommandStart
+from aiogram.types import MenuButtonWebApp, WebAppInfo, Message, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.payload import decode_payload
+from aiogram.filters.command import CommandObject
 from supabase import create_client, Client
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -33,35 +35,31 @@ if SUPABASE_URL and SUPABASE_KEY:
 scheduler = AsyncIOScheduler()
 router = Router()
 
-@router.message(Command("start"))
-async def start(message: types.Message, bot: Bot) -> None:
+@router.message(CommandStart())
+async def start(message: Message, command: CommandObject, bot: Bot):
     if not MINI_APP_URL:
         await message.answer("Ошибка: URL веб-приложения не настроен.")
         return
 
     # Parse slug from /start <slug>
-    args = message.text.split()
-    slug = args[1] if len(args) > 1 else 'chop-pavlodar'
+    slug = command.args or 'chop-pavlodar'
     
-    # Save user's selected barbershop slug (optional: to DB)
-    # For now, we pass it as a URL query parameter instead of startapp parameter to MiniApp
-    app_url = MINI_APP_URL
-    if '?' in app_url:
-        app_url += f"&slug={slug}"
-    else:
-        app_url += f"?slug={slug}"
+    # URL to the actual Railway deployment with slug parameter
+    web_app_url = f"{MINI_APP_URL}/static/index.html?slug={slug}"
+    if 'index.html' in MINI_APP_URL:
+        web_app_url = f"{MINI_APP_URL}?slug={slug}"
 
     await bot.set_chat_menu_button(
         chat_id=message.chat.id,
-        menu_button=MenuButtonWebApp(type="web_app", text="Записаться", web_app=WebAppInfo(url=app_url))
+        menu_button=MenuButtonWebApp(type="web_app", text="Записаться", web_app=WebAppInfo(url=web_app_url))
     )
     
     # Send a button as well
-    kb = [[types.InlineKeyboardButton(text="✂️ Записаться", web_app=WebAppInfo(url=app_url))]]
-    reply_markup = types.InlineKeyboardMarkup(inline_keyboard=kb)
+    kb = [[InlineKeyboardButton(text="✂️ Записаться", web_app=WebAppInfo(url=web_app_url))]]
+    reply_markup = InlineKeyboardMarkup(inline_keyboard=kb)
     
     await message.answer(
-        "Привет! Нажми кнопку чтобы записаться 👇",
+        "Жми кнопку — выбери мастера и время 👇",
         reply_markup=reply_markup
     )
 

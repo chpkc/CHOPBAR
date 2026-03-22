@@ -29,17 +29,13 @@ async def start(message: types.Message):
     if not ADMIN_BOT_TOKEN:
         await message.answer("Ошибка: Токен бота не настроен.")
         return
+
+    # Parse slug from /start <slug>
+    args = message.text.split()
+    slug = args[1] if len(args) > 1 else 'chop-pavlodar'
         
-    admin_url = MINI_APP_URL
-    if admin_url:
-        if not admin_url.endswith('/'):
-            admin_url += '/'
-        if not admin_url.endswith('admin/'):
-             if 'admin' not in admin_url:
-                 admin_url += 'admin'
-    else:
-        await message.answer("Ошибка: URL веб-приложения не настроен (MINI_APP_URL).")
-        return
+    # URL to the actual Railway deployment with slug parameter
+    admin_url = f"https://chopbar-production.up.railway.app/static/admin.html?slug={slug}"
 
     kb = [
         [KeyboardButton(text="🛠 Открыть Админку", web_app=WebAppInfo(url=admin_url))]
@@ -47,7 +43,7 @@ async def start(message: types.Message):
     reply_markup = ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
 
     await message.answer(
-        "👋 Привет, Админ!\n\nНажми кнопку ниже, чтобы управлять записями.",
+        f"👋 Привет, Админ!\n\nБарбершоп: {slug}\nНажми кнопку ниже, чтобы управлять записями.",
         reply_markup=reply_markup
     )
 

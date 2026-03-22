@@ -426,7 +426,7 @@
 
         // Auto-fill invite code from URL if present
         const urlParams = new URLSearchParams(window.location.search);
-        const urlInvite = tg.initDataUnsafe?.start_param || urlParams.get('invite');
+        const urlInvite = urlParams.get('invite') || tg.initDataUnsafe?.start_param || urlParams.get('startapp');
         if (urlInvite) {
             document.getElementById('input-invite').value = urlInvite;
         }

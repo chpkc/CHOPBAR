@@ -139,9 +139,12 @@ async def cmd_start(message: Message):
     base_url = "https://chopbar-production.up.railway.app/static/partner_app.html"
     web_app_url = base_url
     
-    # Append invite code to start_param so MiniApp can read it
+    # Append invite code to URL query parameter
     if invite_code:
-        web_app_url += f"?startapp={invite_code}"
+        if '?' in web_app_url:
+            web_app_url += f"&invite={invite_code}"
+        else:
+            web_app_url += f"?invite={invite_code}"
 
     from aiogram.types import WebAppInfo
     kb = [

@@ -309,21 +309,22 @@ async def register_barbershop(data: RegisterBarbershopModel):
 @app.get("/api/barbershop")
 async def get_barbershop(slug: str = 'chop-pavlodar'):
     if not supabase:
-        return JSONResponse(status_code=503, content={"error": "Database not configured"})
+        return {"name": "CHOP BAR", "city": "ПАВЛОДАР"}
         
     try:
-        res = supabase.table("barbershops").select("name, city").eq("slug", slug).execute()
-        if not res.data:
-            # Fallback to default
-            res = supabase.table("barbershops").select("name, city").eq("slug", "chop-pavlodar").execute()
+        res = supabase.table("barbershops").select("*").eq("slug", slug).execute()
+        if res.data:
+            return res.data[0]
+        
+        # Fallback to default in DB
+        res = supabase.table("barbershops").select("*").eq("slug", "chop-pavlodar").execute()
+        if res.data:
+            return res.data[0]
             
-        if not res.data:
-            return JSONResponse(status_code=404, content={"error": "Barbershop not found"})
-            
-        return res.data[0]
+        return {"name": "CHOP BAR", "city": "ПАВЛОДАР"}
     except Exception as e:
         print(f"Error fetching barbershop: {e}")
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        return {"name": "CHOP BAR", "city": "ПАВЛОДАР"}
 
 @app.get("/api/barbers")
 async def get_barbers(slug: str = 'chop-pavlodar'):
