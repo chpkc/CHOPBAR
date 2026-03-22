@@ -207,6 +207,22 @@ async def read_barber():
 
 # --- ENDPOINTS ---
 
+@app.get("/api/check-invite")
+async def check_invite(code: str):
+    if not supabase:
+        return JSONResponse(status_code=503, content={"error": "Database not configured"})
+        
+    try:
+        res = supabase.table("invites").select("*").eq("code", code).execute()
+        invites = res.data
+        
+        if invites and not invites[0].get("used"):
+            return {"valid": True}
+        return {"valid": False}
+    except Exception as e:
+        print(f"Error checking invite: {e}")
+        return {"valid": False}
+
 @app.post("/api/register-barbershop")
 async def register_barbershop(data: RegisterBarbershopModel):
     if not supabase:

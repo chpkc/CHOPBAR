@@ -2,164 +2,419 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>CHOPBAR PARTNER.</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CHOPBAR PARTNER</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Unbounded:wght@400;500;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* Partner Dark Theme */
-            --bg-color: #1C1C1C;
-            --primary-dark: #000000;
+            --bg-color: #F5F1E8;
+            --primary-dark: #1C1C1C;
             --accent-gold: #B8962E;
-            --text-main: #FFFFFF;
-            --text-muted: #888888;
-            --input-bg: #2C2C2C;
-            --border-color: #333333;
+            --card-bg: #FFFFFF;
+            --text-main: #1C1C1C;
+            --text-muted: #666666;
+            --border-color: #E0E0E0;
+            --error-color: #D32F2F;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
 
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
             color: var(--text-main);
-            margin: 0; padding: 0;
-            height: 100vh; width: 100vw;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
             overflow: hidden;
+            position: relative;
         }
 
-        h1, h2, h3, .font-heading { font-family: 'Unbounded', sans-serif; margin: 0; }
-        .hidden { display: none !important; }
-        
-        .screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: none; flex-direction: column;
-            padding: 24px;
-            overflow-y: auto;
-        }
-        .screen.active { display: flex; }
-
-        /* --- HERO --- */
-        .city-label {
+        h1, h2, h3 {
             font-family: 'Unbounded', sans-serif;
-            font-size: 10px; letter-spacing: 0.15em; color: var(--accent-gold);
-            margin-bottom: 24px; display: block;
+            margin: 0;
         }
-        .hero-title {
-            font-size: 48px; line-height: 1; font-weight: 900;
-            text-transform: uppercase; margin-bottom: 24px;
-        }
-        .hero-title span { color: var(--accent-gold); display: block; }
-        .hero-desc { color: var(--text-muted); font-size: 16px; line-height: 1.5; margin-bottom: 40px; }
 
-        /* --- FORM --- */
-        .form-group { margin-bottom: 20px; }
-        .form-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
-        .form-input {
-            width: 100%; background: var(--input-bg); border: 1px solid var(--border-color);
-            color: var(--text-main); padding: 16px; font-size: 16px; font-family: 'Inter', sans-serif;
-            outline: none; transition: border-color 0.2s;
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            opacity: 1;
+            transform: translateY(0);
+            z-index: 1;
         }
-        .form-input:focus { border-color: var(--accent-gold); }
+
+        .screen.hidden {
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* --- SCREEN 1: INVITE --- */
+        .logo-text {
+            font-size: 32px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .welcome-title {
+            font-size: 24px;
+            margin-bottom: 12px;
+        }
+        
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 15px;
+            line-height: 1.4;
+            margin-bottom: 32px;
+        }
+
+        .invite-input-wrapper {
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        .invite-input {
+            width: 100%;
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 4px;
+            color: var(--primary-dark);
+            text-transform: uppercase;
+            outline: none;
+            transition: border-color 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+
+        .invite-input:focus {
+            border-color: var(--accent-gold);
+        }
+
+        .invite-input::placeholder {
+            color: #CCCCCC;
+            font-weight: 400;
+            letter-spacing: normal;
+        }
+
+        .error-text {
+            color: var(--error-color);
+            font-size: 13px;
+            text-align: center;
+            min-height: 18px;
+            margin-bottom: auto;
+            font-weight: 500;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+        .shake {
+            animation: shake 0.4s ease-in-out;
+            border-color: var(--error-color) !important;
+        }
+
+        .support-link {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 24px;
+        }
+        .support-link a {
+            color: var(--accent-gold);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* --- SCREEN 2: FORM --- */
+        .nav-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 0;
+        }
+        
+        .form-title {
+            font-size: 24px;
+            line-height: 1.2;
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .form-label span {
+            color: var(--error-color);
+        }
+        .form-input {
+            width: 100%;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 16px;
+            font-family: 'Inter', sans-serif;
+            color: var(--primary-dark);
+            outline: none;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+        .form-input:focus {
+            border-color: var(--accent-gold);
+            box-shadow: 0 4px 12px rgba(184, 150, 46, 0.1);
+        }
+
+        /* --- SCREEN 3: SUCCESS --- */
+        .success-icon-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-top: 40px;
+            margin-bottom: 24px;
+        }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background-color: var(--accent-gold);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 40px;
+            box-shadow: 0 8px 24px rgba(184, 150, 46, 0.3);
+        }
+        .success-title {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        .success-subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 32px;
+        }
+
+        .link-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .link-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 15px;
+        }
+        .link-url {
+            font-family: monospace;
+            font-size: 13px;
+            color: var(--text-muted);
+            word-break: break-all;
+            background: var(--bg-color);
+            padding: 8px;
+            border-radius: 6px;
+        }
+        .copy-btn {
+            background: none;
+            border: 1px solid var(--accent-gold);
+            color: var(--accent-gold);
+            border-radius: 6px;
+            padding: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .copy-btn:active {
+            background: var(--accent-gold);
+            color: white;
+        }
 
         /* --- BUTTONS --- */
         .cta-button {
-            background-color: var(--accent-gold); color: var(--primary-dark);
-            font-family: 'Unbounded', sans-serif; font-weight: 700; font-size: 14px;
-            letter-spacing: 0.1em; text-transform: uppercase;
-            border: none; padding: 20px; width: 100%; cursor: pointer;
-            margin-top: auto; display: flex; justify-content: center; align-items: center; gap: 8px;
+            background-color: var(--accent-gold);
+            color: #FFFFFF;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 16px;
+            border: none;
+            border-radius: 12px;
+            padding: 18px;
+            width: 100%;
+            cursor: pointer;
+            margin-top: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 16px rgba(184, 150, 46, 0.2);
+            transition: transform 0.1s, box-shadow 0.1s;
         }
-        
-        .secondary-btn {
-            background: transparent; border: 1px solid var(--accent-gold);
-            color: var(--accent-gold); margin-top: 16px;
+        .cta-button:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 8px rgba(184, 150, 46, 0.2);
+        }
+        .cta-button:disabled {
+            background-color: #CCCCCC;
+            box-shadow: none;
+            cursor: not-allowed;
         }
 
-        /* --- SUCCESS LINKS --- */
-        .link-card {
-            background: var(--input-bg); border: 1px solid var(--border-color);
-            padding: 16px; margin-bottom: 16px;
-        }
-        .link-title { font-size: 12px; color: var(--accent-gold); margin-bottom: 8px; text-transform: uppercase; }
-        .link-url { font-family: monospace; font-size: 14px; word-break: break-all; color: var(--text-main); }
-        
         .loader {
-            display: inline-block; width: 20px; height: 20px;
-            border: 2px solid var(--primary-dark); border-bottom-color: transparent;
-            border-radius: 50%; animation: rotation 1s linear infinite;
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #FFFFFF;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            animation: rotation 1s linear infinite;
         }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .d-none { display: none !important; }
     </style>
 </head>
 <body>
 
-    <!-- SCREEN 1: WELCOME -->
-    <div id="screen-welcome" class="screen active">
-        <span class="city-label">ПАВЛОДАР · CHOP</span>
-        <h1 class="hero-title">CHOPBAR<br><span>PARTNER.</span></h1>
-        <p class="hero-desc">Подключи свой барбершоп к системе онлайн-записи нового поколения.</p>
+    <!-- SCREEN 1: INVITE CODE -->
+    <div id="screen-invite" class="screen">
+        <div class="logo-text">CHOPBAR</div>
         
+        <h2 class="welcome-title">Добро пожаловать</h2>
+        <p class="subtitle">Введи инвайт-код, который прислал тебе администратор CHOPBAR</p>
+        
+        <div class="invite-input-wrapper">
+            <input type="text" id="input-invite" class="invite-input" placeholder="XXXXXX" maxlength="10" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+        </div>
+        <div id="invite-error" class="error-text"></div>
+
         <div style="flex-grow: 1;"></div>
-        <button class="cta-button" onclick="showScreen('screen-form')">НАЧАТЬ →</button>
+        
+        <button id="btn-check-invite" class="cta-button" onclick="checkInvite()">
+            <span id="btn-check-text">ПРОДОЛЖИТЬ →</span>
+            <span id="btn-check-loader" class="loader d-none"></span>
+        </button>
+        
+        <div class="support-link">Нет кода? Напиши <a href="https://t.me/chpk" target="_blank">@chpk</a></div>
     </div>
 
     <!-- SCREEN 2: FORM -->
-    <div id="screen-form" class="screen">
-        <h2 class="font-heading" style="font-size: 24px; margin-bottom: 32px;">РЕГИСТРАЦИЯ</h2>
+    <div id="screen-form" class="screen hidden">
+        <div class="nav-header">
+            <button class="back-btn" onclick="showScreen('screen-invite')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Назад
+            </button>
+        </div>
+        
+        <h2 class="form-title">Расскажи о своём<br>барбершопе</h2>
         
         <div class="form-group">
-            <label class="form-label">Название барбершопа</label>
-            <input type="text" id="input-name" class="form-input" placeholder="Например: Black Beard">
+            <label class="form-label">Название <span>*</span></label>
+            <input type="text" id="input-name" class="form-input" placeholder="Black Beard">
         </div>
         
         <div class="form-group">
-            <label class="form-label">Город</label>
-            <input type="text" id="input-city" class="form-input" placeholder="Например: Астана">
+            <label class="form-label">Город <span>*</span></label>
+            <input type="text" id="input-city" class="form-input" placeholder="Астана">
         </div>
         
         <div class="form-group">
-            <label class="form-label">Номер телефона</label>
+            <label class="form-label">Телефон <span>*</span></label>
             <input type="tel" id="input-phone" class="form-input" placeholder="+7 (___) ___-__-__">
         </div>
         
         <div class="form-group">
-            <label class="form-label">Instagram или 2GIS (необязательно)</label>
-            <input type="text" id="input-social" class="form-input" placeholder="@username или ссылка">
+            <label class="form-label">Instagram или 2GIS</label>
+            <input type="text" id="input-social" class="form-input" placeholder="@username (необязательно)">
         </div>
 
         <div style="flex-grow: 1;"></div>
+        
         <button id="btn-submit" class="cta-button" onclick="submitForm()">
-            <span id="btn-text">ПОДКЛЮЧИТЬ →</span>
-            <span id="btn-loader" class="loader hidden"></span>
+            <span id="btn-submit-text">ПОДКЛЮЧИТЬ →</span>
+            <span id="btn-submit-loader" class="loader d-none"></span>
         </button>
     </div>
 
     <!-- SCREEN 3: SUCCESS -->
-    <div id="screen-success" class="screen">
-        <h2 class="font-heading" style="font-size: 24px; margin-bottom: 16px; color: var(--accent-gold);">✅ ПОДКЛЮЧЕНО!</h2>
-        <p style="color: var(--text-muted); margin-bottom: 32px;">Ваш барбершоп успешно зарегистрирован. Сохраните эти ссылки:</p>
+    <div id="screen-success" class="screen hidden">
+        <div class="success-icon-wrapper">
+            <div class="success-icon">✓</div>
+        </div>
+        
+        <h2 class="success-title">Барбершоп подключён!</h2>
+        <p class="success-subtitle">Вот твои персональные ссылки:</p>
 
         <div class="link-card">
-            <div class="link-title">💈 Ссылка для клиентов</div>
-            <a class="link-url" id="link-client" style="color: var(--accent-gold); text-decoration: none;">t.me/bot?start=...</a>
+            <div class="link-header">💈 Для клиентов</div>
+            <div class="link-url" id="link-client">t.me/bot?start=...</div>
+            <button class="copy-btn" onclick="copyText('link-client', this)">Скопировать</button>
         </div>
 
         <div class="link-card">
-            <div class="link-title">👨‍💼 Ссылка для мастеров</div>
-            <a class="link-url" id="link-master" style="color: var(--accent-gold); text-decoration: none;">t.me/bot?start=...</a>
+            <div class="link-header">👨‍💼 Для мастеров</div>
+            <div class="link-url" id="link-master">t.me/bot?start=...</div>
+            <button class="copy-btn" onclick="copyText('link-master', this)">Скопировать</button>
         </div>
 
         <div class="link-card">
-            <div class="link-title">⚙️ Твоя админ-панель</div>
-            <a class="link-url" id="link-admin" style="color: var(--accent-gold); text-decoration: none;">t.me/bot?start=...</a>
+            <div class="link-header">⚙️ Админ-панель</div>
+            <div class="link-url" id="link-admin">t.me/bot?start=...</div>
+            <button class="copy-btn" onclick="copyText('link-admin', this)">Скопировать</button>
         </div>
-
+        
         <div style="flex-grow: 1;"></div>
-        <button class="cta-button secondary-btn" onclick="Telegram.WebApp.close()">ЗАКРЫТЬ</button>
     </div>
 
     <script>
@@ -167,12 +422,66 @@
         tg.expand();
         tg.ready();
 
+        let validInviteCode = "";
+
+        // Auto-fill invite code from URL if present
         const urlParams = new URLSearchParams(window.location.search);
-        const inviteCode = tg.initDataUnsafe?.start_param || urlParams.get('invite') || '';
+        const urlInvite = tg.initDataUnsafe?.start_param || urlParams.get('invite');
+        if (urlInvite) {
+            document.getElementById('input-invite').value = urlInvite;
+        }
+
+        // Auto-caps invite input
+        document.getElementById('input-invite').addEventListener('input', function(e) {
+            this.value = this.value.toUpperCase();
+            document.getElementById('invite-error').innerText = "";
+            this.classList.remove('shake');
+        });
 
         function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        async function checkInvite() {
+            const input = document.getElementById('input-invite');
+            const code = input.value.trim();
+            const errorDiv = document.getElementById('invite-error');
+            const btnText = document.getElementById('btn-check-text');
+            const btnLoader = document.getElementById('btn-check-loader');
+            const btn = document.getElementById('btn-check-invite');
+
+            if (!code) {
+                errorDiv.innerText = "Введите код";
+                input.classList.add('shake');
+                setTimeout(() => input.classList.remove('shake'), 400);
+                return;
+            }
+
+            btn.disabled = true;
+            btnText.classList.add('d-none');
+            btnLoader.classList.remove('d-none');
+            errorDiv.innerText = "";
+
+            try {
+                const res = await fetch(`/api/check-invite?code=${encodeURIComponent(code)}`);
+                const data = await res.json();
+
+                if (data.valid) {
+                    validInviteCode = code;
+                    showScreen('screen-form');
+                } else {
+                    errorDiv.innerText = "Неверный или уже использованный код";
+                    input.classList.add('shake');
+                    setTimeout(() => input.classList.remove('shake'), 400);
+                }
+            } catch (err) {
+                errorDiv.innerText = "Ошибка сети. Попробуйте позже.";
+            } finally {
+                btn.disabled = false;
+                btnText.classList.remove('d-none');
+                btnLoader.classList.add('d-none');
+            }
         }
 
         async function submitForm() {
@@ -182,22 +491,24 @@
             const social = document.getElementById('input-social').value.trim();
 
             if (!name || !city || !phone) {
-                alert("Пожалуйста, заполните все обязательные поля (Название, Город, Телефон).");
+                tg.showAlert("Заполни обязательные поля (Название, Город, Телефон)");
                 return;
             }
 
-            const btnText = document.getElementById('btn-text');
-            const btnLoader = document.getElementById('btn-loader');
+            const btn = document.getElementById('btn-submit');
+            const btnText = document.getElementById('btn-submit-text');
+            const btnLoader = document.getElementById('btn-submit-loader');
             
-            btnText.classList.add('hidden');
-            btnLoader.classList.remove('hidden');
+            btn.disabled = true;
+            btnText.classList.add('d-none');
+            btnLoader.classList.remove('d-none');
 
             const payload = {
                 name: name,
                 city: city,
                 phone: phone,
                 instagram: social,
-                invite_code: inviteCode,
+                invite_code: validInviteCode,
                 owner_telegram_id: tg.initDataUnsafe?.user?.id?.toString() || '0'
             };
 
@@ -212,21 +523,45 @@
 
                 if (data.success) {
                     document.getElementById('link-client').innerText = data.client_link;
-                    document.getElementById('link-client').href = data.client_link;
                     document.getElementById('link-master').innerText = data.crew_link;
-                    document.getElementById('link-master').href = data.crew_link;
                     document.getElementById('link-admin').innerText = data.admin_link;
-                    document.getElementById('link-admin').href = data.admin_link;
                     showScreen('screen-success');
                 } else {
-                    alert(data.error || "Произошла ошибка при регистрации. Проверь инвайт-код.");
+                    tg.showAlert(data.error || "Произошла ошибка при регистрации.");
                 }
             } catch (err) {
-                alert("Ошибка сети: " + err.message);
+                tg.showAlert("Ошибка сети: " + err.message);
             } finally {
-                btnText.classList.remove('hidden');
-                btnLoader.classList.add('hidden');
+                btn.disabled = false;
+                btnText.classList.remove('d-none');
+                btnLoader.classList.add('d-none');
             }
+        }
+
+        function copyText(elementId, btnElement) {
+            const text = document.getElementById(elementId).innerText;
+            
+            // Fallback for older Telegram versions or browsers
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                const originalText = btnElement.innerText;
+                btnElement.innerText = "Скопировано!";
+                btnElement.style.background = "var(--accent-gold)";
+                btnElement.style.color = "white";
+                
+                setTimeout(() => {
+                    btnElement.innerText = originalText;
+                    btnElement.style.background = "none";
+                    btnElement.style.color = "var(--accent-gold)";
+                }, 2000);
+            } catch (err) {
+                console.error('Oops, unable to copy', err);
+            }
+            document.body.removeChild(textArea);
         }
     </script>
 </body>
