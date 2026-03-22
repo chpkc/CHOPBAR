@@ -44,12 +44,12 @@ async def start(message: types.Message, bot: Bot) -> None:
     slug = args[1] if len(args) > 1 else 'chop-pavlodar'
     
     # Save user's selected barbershop slug (optional: to DB)
-    # For now, we can pass it as startapp parameter to MiniApp
+    # For now, we pass it as a URL query parameter instead of startapp parameter to MiniApp
     app_url = MINI_APP_URL
     if '?' in app_url:
-        app_url += f"&startapp={slug}"
+        app_url += f"&slug={slug}"
     else:
-        app_url += f"?startapp={slug}"
+        app_url += f"?slug={slug}"
 
     await bot.set_chat_menu_button(
         chat_id=message.chat.id,
@@ -57,11 +57,11 @@ async def start(message: types.Message, bot: Bot) -> None:
     )
     
     # Send a button as well
-    kb = [[types.InlineKeyboardButton(text="Записаться 💈", web_app=WebAppInfo(url=app_url))]]
+    kb = [[types.InlineKeyboardButton(text="✂️ Записаться", web_app=WebAppInfo(url=app_url))]]
     reply_markup = types.InlineKeyboardMarkup(inline_keyboard=kb)
     
     await message.answer(
-        "Добро пожаловать в наш барбершоп! Нажмите на кнопку 'Записаться', чтобы выбрать время.",
+        "Привет! Нажми кнопку чтобы записаться 👇",
         reply_markup=reply_markup
     )
 

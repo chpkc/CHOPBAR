@@ -1107,7 +1107,8 @@
     tg.ready();
     tg.expand();
 
-    const slug = tg.initDataUnsafe?.start_param || 'chop-pavlodar';
+    const urlParams = new URLSearchParams(window.location.search);
+    const slug = urlParams.get('slug') || tg.initDataUnsafe?.start_param || 'chop-pavlodar';
 
     // --- DATA ---
     const times = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
