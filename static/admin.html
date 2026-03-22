@@ -739,12 +739,25 @@
     tg.ready();
     tg.expand();
 
+    const slug = tg.initDataUnsafe?.start_param || 'chop-pavlodar';
+
     let bookingsData = [];
     let barbersData = [];
     let servicesData = [];
     let currentTab = 'active';
 
     async function init() {
+        // Fetch shop details based on slug
+        try {
+            const shopRes = await fetch(`/api/barbershop?slug=${slug}`);
+            if (shopRes.ok) {
+                const shop = await shopRes.json();
+                document.querySelector('header .header-label').innerText = `${shop.city.toUpperCase()} · ${shop.name.toUpperCase()}`;
+            }
+        } catch (e) {
+            console.error("Failed to load barbershop details", e);
+        }
+
         await Promise.all([fetchBookings(), fetchBarbers(), fetchServices()]);
         render();
         
@@ -760,7 +773,7 @@
 
     async function fetchServices() {
         try {
-            const res = await fetch('/services', { cache: "no-store" });
+            const res = await fetch(`/api/services?slug=${slug}`, { cache: "no-store" });
             servicesData = await res.json();
             renderServices();
         } catch (e) {
@@ -772,7 +785,7 @@
         if(!silent) document.getElementById('loading').classList.remove('hidden');
         try {
             console.log("Fetching bookings...");
-            const res = await fetch('/admin/bookings', { cache: "no-store" });
+            const res = await fetch(`/api/admin/bookings?slug=${slug}`, { cache: "no-store" });
             if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
             bookingsData = await res.json();
             console.log("Bookings loaded:", bookingsData.length);
@@ -789,7 +802,7 @@
 
     async function fetchBarbers() {
         try {
-            const res = await fetch('/barbers', { cache: "no-store" });
+            const res = await fetch(`/api/barbers?slug=${slug}`, { cache: "no-store" });
             barbersData = await res.json();
             renderBarbers();
         } catch (e) {
@@ -797,16 +810,28 @@
         }
     }
 
-    function updateStats() {
-        const total = bookingsData.length;
-        const newBookings = bookingsData.filter(b => b.status === 'new').length;
-        const income = bookingsData
-            .filter(b => b.status !== 'cancelled')
-            .reduce((sum, b) => sum + (b.price || 0), 0);
+    async function updateStats() {
+        try {
+            const res = await fetch(`/api/admin/stats?slug=${slug}`);
+            const stats = await res.json();
+            if (stats.error) throw new Error(stats.error);
 
-        document.getElementById('stat-total').innerText = total;
-        document.getElementById('stat-new').innerText = newBookings;
-        document.getElementById('stat-income').innerText = income.toLocaleString('ru-RU') + '₸';
+            document.getElementById('stat-total').innerText = stats.total_bookings;
+            document.getElementById('stat-new').innerText = stats.active_bookings;
+            document.getElementById('stat-income').innerText = stats.revenue.toLocaleString('ru-RU') + '₸';
+        } catch (e) {
+            console.error("Failed to update stats:", e);
+            // Fallback to manual calc if endpoint fails
+            const total = bookingsData.length;
+            const newBookings = bookingsData.filter(b => b.status === 'new').length;
+            const income = bookingsData
+                .filter(b => b.status !== 'cancelled')
+                .reduce((sum, b) => sum + (b.price || 0), 0);
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-new').innerText = newBookings;
+            document.getElementById('stat-income').innerText = income.toLocaleString('ru-RU') + '₸';
+        }
     }
 
     function switchTab(tab) {
@@ -1003,7 +1028,7 @@
     async function deleteService(id) {
         if(!confirm("Удалить услугу?")) return;
         try {
-            const res = await fetch(`/services/${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/admin/services/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 fetchServices();
             } else {
@@ -1028,7 +1053,7 @@
         
         const payload = { name, price, duration_minutes: duration, master_id };
         const method = id ? 'PUT' : 'POST';
-        const url = id ? `/services/${id}` : '/services';
+        const url = id ? `/api/admin/services/${id}` : `/api/admin/services?slug=${slug}`;
         
         try {
             const res = await fetch(url, {
@@ -1080,7 +1105,7 @@
     async function cancelBooking(id) {
         if(!confirm('Отменить запись?')) return;
         try {
-            await fetch(`/bookings/${id}`, { method: 'DELETE' });
+            await fetch(`/api/bookings/${id}`, { method: 'DELETE' });
             fetchBookings(); // refresh
         } catch (e) {
             alert('Ошибка: ' + e);
@@ -1091,7 +1116,7 @@
         if(!confirm('Завершить стрижку? Клиенту придет уведомление.')) return;
         try {
             // Use the API endpoint that sends notifications
-            const res = await fetch(`/barber/bookings/${id}`, {
+            const res = await fetch(`/api/barber/bookings/${id}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({status: 'done'})
@@ -1156,14 +1181,14 @@
             let res;
             if (id) {
                 // Update
-                res = await fetch(`/barbers/${id}`, {
+                res = await fetch(`/api/admin/barbers/${id}`, {
                     method: 'PATCH',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(data)
                 });
             } else {
                 // Create
-                res = await fetch('/barbers', {
+                res = await fetch(`/api/admin/barbers?slug=${slug}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(data)
@@ -1185,7 +1210,7 @@
         if(!confirm('Удалить мастера? Это действие нельзя отменить.')) return;
         
         try {
-            const res = await fetch(`/barbers/${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/admin/barbers/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 fetchBarbers();
             } else {
@@ -1235,7 +1260,8 @@
             price: parseInt(document.getElementById('booking-price-input').value),
             duration: 45, // Default
             telegram_id: document.getElementById('booking-client-input').value, // Using client name as ID for manual entry or just string
-            force: true // Allow past bookings for admin
+            force: true, // Allow past bookings for admin
+            slug: slug
         };
         
         if (!data.master || !data.service || !data.date || !data.time || !data.price || !data.telegram_id) {
@@ -1244,7 +1270,7 @@
         }
         
         try {
-            const res = await fetch('/booking', {
+            const res = await fetch('/api/bookings', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(data)

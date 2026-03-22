@@ -1137,6 +1137,12 @@
                 const shop = await shopRes.json();
                 document.getElementById('hero-title').innerHTML = shop.name.toUpperCase().replace(' ', '<br><span>') + '</span>';
                 document.getElementById('hero-city-label').innerText = shop.city.toUpperCase();
+                
+                // Update ticker if it exists
+                const tickerItems = document.querySelectorAll('.ticker-item');
+                tickerItems.forEach(item => {
+                    item.innerText = `${shop.name.toUpperCase()} • ${shop.city.toUpperCase()} • МУЖСКИЕ СТРИЖКИ • `;
+                });
             } else {
                 document.getElementById('hero-title').innerHTML = 'CHOP<br><span>BAR.</span>';
                 document.getElementById('hero-city-label').innerText = 'ПАВЛОДАР';
@@ -1165,7 +1171,7 @@
     
     async function loadBarbers() {
         try {
-            const res = await fetch(`/barbers?slug=${slug}`);
+            const res = await fetch(`/api/barbers?slug=${slug}`);
             const data = await res.json();
             // Map data to match frontend format
             barbers = data.map(b => ({
@@ -1187,7 +1193,7 @@
 
     async function loadServices() {
         try {
-            const res = await fetch(`/services?slug=${slug}`);
+            const res = await fetch(`/api/services?slug=${slug}`);
             const data = await res.json();
             services = data.map(s => ({
                 name: sanitizeText(s.name),
@@ -1210,7 +1216,7 @@
         if (!user) return;
         
         try {
-            const res = await fetch(`/bookings/user?telegram_id=${user.id}&slug=${slug}`);
+            const res = await fetch(`/api/bookings/user?telegram_id=${user.id}&slug=${slug}`);
             if (res.ok) {
                 myBookings = await res.json();
                 updateMyBookingsUI();
@@ -1279,7 +1285,7 @@
         if(!confirm("Вы уверены, что хотите отменить запись?")) return;
         
         try {
-            const res = await fetch(`/bookings/${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/bookings/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 // Refresh
                 await loadMyBookings();
@@ -1617,7 +1623,7 @@
         timeGrid.style.opacity = '0.5';
         
         try {
-            const res = await fetch(`/bookings/slots?master=${encodeURIComponent(masterName)}&date=${isoDate}&slug=${slug}`);
+            const res = await fetch(`/api/bookings/slots?master=${encodeURIComponent(masterName)}&date=${isoDate}&slug=${slug}`);
             const data = await res.json();
             const occupied = data.occupied || [];
             
@@ -1733,7 +1739,7 @@
         
         try {
             // Send to backend
-            const response = await fetch('/booking', {
+            const response = await fetch('/api/bookings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(bookingData)
@@ -1812,7 +1818,7 @@
         document.getElementById('loading').classList.remove('hidden');
         
         try {
-            await fetch(`/bookings/${currentBookingId}`, { method: 'DELETE' });
+            await fetch(`/api/bookings/${currentBookingId}`, { method: 'DELETE' });
             
             const successScreen = document.getElementById('success-screen');
             successScreen.innerHTML = `
@@ -1886,7 +1892,7 @@
     async function loadActiveBooking() {
         const telegramId = tg.initDataUnsafe?.user?.id || 'unknown';
         try {
-            const res = await fetch(`/booking/active?telegram_id=${telegramId}&slug=${slug}`);
+            const res = await fetch(`/api/booking/active?telegram_id=${telegramId}&slug=${slug}`);
             const data = await res.json();
             
             if (data.booking) {

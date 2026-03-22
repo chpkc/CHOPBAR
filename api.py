@@ -205,6 +205,23 @@ async def read_barber():
     with open("static/barber.html", "r", encoding="utf-8") as f:
         return f.read()
 
+# --- HELPERS ---
+async def get_barbershop_id(slug: str) -> str:
+    if not supabase: return None
+    try:
+        res = supabase.table("barbershops").select("id").eq("slug", slug).execute()
+        if res.data:
+            return res.data[0]['id']
+        
+        # Fallback to default
+        res = supabase.table("barbershops").select("id").eq("slug", "chop-pavlodar").execute()
+        if res.data:
+            return res.data[0]['id']
+        return None
+    except Exception as e:
+        print(f"Error getting barbershop_id: {e}")
+        return None
+
 # --- ENDPOINTS ---
 
 @app.get("/api/check-invite")
@@ -297,6 +314,10 @@ async def get_barbershop(slug: str = 'chop-pavlodar'):
     try:
         res = supabase.table("barbershops").select("name, city").eq("slug", slug).execute()
         if not res.data:
+            # Fallback to default
+            res = supabase.table("barbershops").select("name, city").eq("slug", "chop-pavlodar").execute()
+            
+        if not res.data:
             return JSONResponse(status_code=404, content={"error": "Barbershop not found"})
             
         return res.data[0]
@@ -304,16 +325,14 @@ async def get_barbershop(slug: str = 'chop-pavlodar'):
         print(f"Error fetching barbershop: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-@app.get("/barbers")
+@app.get("/api/barbers")
 async def get_barbers(slug: str = 'chop-pavlodar'):
     if not supabase:
         return []
     try:
-        # Get shop id
-        shop = supabase.table("barbershops").select("id").eq("slug", slug).execute()
-        if not shop.data:
+        shop_id = await get_barbershop_id(slug)
+        if not shop_id:
             return []
-        shop_id = shop.data[0]['id']
 
         response = supabase.table("barbers").select("*").eq("barbershop_id", shop_id).order("name").execute()
         return response.data
@@ -321,15 +340,22 @@ async def get_barbers(slug: str = 'chop-pavlodar'):
         print(f"Error fetching barbers: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-@app.post("/barbers", dependencies=[Depends(verify_admin)])
-async def create_barber(barber: BarberCreate):
+@app.get("/api/admin/barbers")
+async def get_admin_barbers(slug: str = 'chop-pavlodar'):
+    return await get_barbers(slug)
+
+@app.post("/api/admin/barbers", dependencies=[Depends(verify_admin)])
+async def create_barber(barber: BarberCreate, slug: str = 'chop-pavlodar'):
     if not supabase:
         return JSONResponse(status_code=503, content={"error": "Database not configured"})
     
     try:
+        shop_id = await get_barbershop_id(slug)
         data = barber.dict(exclude_none=True)
         if 'name' in data:
             data['name'] = data['name'].strip()
+        data['barbershop_id'] = shop_id
+        
         response = supabase.table("barbers").insert(data).execute()
         new_barber = response.data[0]
         
@@ -345,8 +371,10 @@ async def create_barber(barber: BarberCreate):
         print(f"Error creating barber: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-@app.patch("/barbers/{id}", dependencies=[Depends(verify_admin)])
+@app.patch("/api/admin/barbers/{id}", dependencies=[Depends(verify_admin)])
 async def update_barber(id: str, barber: BarberUpdate):
+    # This doesn't strictly need slug if id is unique across all shops,
+    # but let's keep it consistent if needed.
     if not supabase:
         return JSONResponse(status_code=503, content={"error": "Database not configured"})
     
@@ -377,7 +405,7 @@ async def update_barber(id: str, barber: BarberUpdate):
         print(f"Error updating barber: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-@app.delete("/barbers/{id}", dependencies=[Depends(verify_admin)])
+@app.delete("/api/admin/barbers/{id}", dependencies=[Depends(verify_admin)])
 async def delete_barber(id: str):
     if not supabase:
         return JSONResponse(status_code=503, content={"error": "Database not configured"})
@@ -399,50 +427,13 @@ async def delete_barber(id: str):
         
         future_bookings = bookings_res.data
         
-        # Determine if we should block or auto-cancel
-        # User prompt says: "if barber has future bookings... return error 400"
-        # BUT later in point 6 says: "When admin DELETES a barber ... Check all future bookings... Notify client... Update to cancelled"
-        # These are conflicting instructions.
-        # "return error 400: 'У мастера есть активные записи. Сначала отмените их.'" (Point 1)
-        # vs
-        # "When admin DELETES a barber ... Notify client ... Update all their bookings to status 'cancelled'" (Point 6)
-        
-        # Point 6 seems more detailed and "advanced". I will follow Point 6 as it provides a better UX (auto-cancellation).
-        # Wait, usually "DELETE /barbers/{id}" in API spec (Point 1) is the contract.
-        # Point 6 describes "When admin DELETES a barber".
-        # Let's try to follow Point 6 logic but maybe add a query param or just do it.
-        # Given "Be extremely biased for action", I'll implement the auto-cancellation (Point 6) as it's more complete feature.
-        # However, Point 1 explicitly says "return error 400".
-        # Maybe the UI handles the confirmation?
-        # The UI prompt says: "DELETE BARBER: Show inline confirmation... If error (active bookings) -> show error message inline in red"
-        # This implies the API *should* return error if active bookings exist.
-        # BUT Point 6 says "When admin DELETES... Update all their bookings".
-        # This might mean there's a "Force Delete" option or the user changed their mind.
-        # Or maybe Point 6 is what happens *if* we proceed.
-        # Let's implement the "Block if active bookings" first (Point 1), because it's safer.
-        # And maybe add a `force=true` param to endpoint to do Point 6?
-        # OR, I can just implement Point 6 logic but trigger it only if the user confirms "Delete with cancellations"?
-        # The UI prompt doesn't show a "Delete with cancellations" option, just "Delete".
-        # Let's stick to Point 1 (Error 400) because the UI prompt explicitly mentions showing that error.
-        # "If error (active bookings) -> show error message inline in red"
-        # Point 6 might be a misunderstanding or an alternative requirement.
-        # actually, Point 6 says "When admin DELETES a barber... Check all future bookings... Notify client...".
-        # This implies the deletion *succeeds* and triggers these side effects.
-        # Let's look at the UI prompt again.
-        # "DELETE BARBER: ... If error (active bookings) -> show error message inline in red"
-        # This confirms the UI expects an error.
-        # So I will implement: Check bookings -> if > 0, return 400.
-        # But wait, if I return 400, I can't do Point 6 (notifications).
-        # Unless I implement a separate "Cancel all bookings for master" endpoint, or the user manually cancels them.
-        # I will implement the 400 Error.
-        
         if future_bookings:
             return JSONResponse(status_code=400, content={"error": "У мастера есть активные записи. Сначала отмените их."})
         
         # If no active bookings, delete
         supabase.table("barbers").delete().eq("id", id).execute()
         
-        # Notify Admin (Point 6 says notify admin about deletion and cancellations, but if we error on active, there are no cancellations)
+        # Notify Admin
         if ADMIN_BOT_TOKEN and ADMIN_IDS:
              msg = f"🗑 Мастер {barber_name} удалён."
              await send_telegram_message(ADMIN_BOT_TOKEN, ADMIN_IDS[0], msg)
@@ -452,6 +443,7 @@ async def delete_barber(id: str):
     except Exception as e:
         print(f"Error deleting barber: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
+
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
@@ -476,17 +468,15 @@ async def chat(request: ChatRequest):
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-@app.post("/booking")
+@app.post("/api/bookings")
 async def create_booking(booking: BookingModel):
     if not supabase:
         return JSONResponse(status_code=503, content={"error": "Database not configured"})
 
     try:
-        # Get shop id
-        shop = supabase.table("barbershops").select("id").eq("slug", booking.slug).execute()
-        if not shop.data:
+        shop_id = await get_barbershop_id(booking.slug)
+        if not shop_id:
             return JSONResponse(status_code=404, content={"error": "Barbershop not found"})
-        shop_id = shop.data[0]['id']
 
         # Validate time is not in past
         if not booking.force:
@@ -524,7 +514,7 @@ async def create_booking(booking: BookingModel):
         
         # NOTIFICATIONS
         # 1. Notify Master
-        master = supabase.table('barbers').select('telegram_id').eq('name', booking.master).execute()
+        master = supabase.table('barbers').select('telegram_id').eq('name', booking.master).eq('barbershop_id', shop_id).execute()
         if master.data and master.data[0].get('telegram_id'):
               master_tg = master.data[0]['telegram_id']
               text = f"📅 Новая запись!\nУслуга: {booking.service}\nДата: {booking.date}\nВремя: {booking.time}\nКлиент ID: {booking.telegram_id}"
@@ -541,14 +531,13 @@ async def create_booking(booking: BookingModel):
         print(f"Error creating booking: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-@app.get("/admin/bookings")
+@app.get("/api/admin/bookings")
 async def get_admin_bookings(slug: str = 'chop-pavlodar'):
     if not supabase: return []
     try:
-        shop = supabase.table("barbershops").select("id").eq("slug", slug).execute()
-        if not shop.data:
+        shop_id = await get_barbershop_id(slug)
+        if not shop_id:
             return []
-        shop_id = shop.data[0]['id']
 
         response = supabase.table("bookings").select("*").eq("barbershop_id", shop_id).order("date", desc=True).order("time", desc=True).execute()
         return response.data
@@ -556,14 +545,13 @@ async def get_admin_bookings(slug: str = 'chop-pavlodar'):
         print(f"Error fetching admin bookings: {e}")
         return []
 
-@app.get("/bookings")
+@app.get("/api/bookings")
 async def get_bookings(slug: str = 'chop-pavlodar'):
     if supabase:
         try:
-            shop = supabase.table("barbershops").select("id").eq("slug", slug).execute()
-            if not shop.data:
+            shop_id = await get_barbershop_id(slug)
+            if not shop_id:
                 return []
-            shop_id = shop.data[0]['id']
 
             response = supabase.table("bookings").select("*").eq("barbershop_id", shop_id).order("created_at", desc=True).execute()
             return response.data
@@ -574,15 +562,14 @@ async def get_bookings(slug: str = 'chop-pavlodar'):
         return []
 
 
-@app.get("/bookings/slots")
+@app.get("/api/bookings/slots")
 async def get_occupied_slots(master: str, date: str, slug: str = 'chop-pavlodar'):
     if not supabase:
         return {"occupied": []}
     try:
-        shop = supabase.table("barbershops").select("id").eq("slug", slug).execute()
-        if not shop.data:
+        shop_id = await get_barbershop_id(slug)
+        if not shop_id:
             return {"occupied": []}
-        shop_id = shop.data[0]['id']
 
         result = supabase.table('bookings')\
             .select('time')\
@@ -596,15 +583,14 @@ async def get_occupied_slots(master: str, date: str, slug: str = 'chop-pavlodar'
         print(f"Error fetching slots: {e}")
         return {"occupied": [], "error": str(e)}
 
-@app.get("/booking/active")
+@app.get("/api/booking/active")
 async def get_active_booking(telegram_id: str, slug: str = 'chop-pavlodar'):
     if not supabase:
         return {"booking": None}
     try:
-        shop = supabase.table("barbershops").select("id").eq("slug", slug).execute()
-        if not shop.data:
+        shop_id = await get_barbershop_id(slug)
+        if not shop_id:
             return {"booking": None}
-        shop_id = shop.data[0]['id']
 
         # Fetch 'new' bookings for the user
         response = supabase.table('bookings')\
@@ -615,12 +601,6 @@ async def get_active_booking(telegram_id: str, slug: str = 'chop-pavlodar'):
             .execute()
             
         bookings = response.data
-        now = datetime.datetime.now(pavlodar_tz)
-        
-        # Sort bookings by date and time
-        # We want the nearest future booking, OR if all are in past (but status=new), show the most recent one?
-        # Actually, if status is 'new', we should probably just show it.
-        # But if there are multiple, we want the earliest one (next appointment).
         
         valid_bookings = []
         for b in bookings:
@@ -636,9 +616,6 @@ async def get_active_booking(telegram_id: str, slug: str = 'chop-pavlodar'):
         # Sort by datetime
         valid_bookings.sort(key=lambda x: x['dt'])
         
-        # Return the first one (earliest 'new' booking)
-        # Even if it's slightly in the past, if it's 'new', the user might still be on their way or it's just happening.
-        # The cron job will clean it up later.
         active = valid_bookings[0]
         del active['dt']
         
@@ -648,22 +625,16 @@ async def get_active_booking(telegram_id: str, slug: str = 'chop-pavlodar'):
         print(f"Error fetching active booking: {e}")
         return {"error": str(e)}
 
-
-
-
-
 # --- SERVICES API ---
-@app.get("/services")
+@app.get("/api/services")
 async def get_services(slug: str = 'chop-pavlodar', master_id: Optional[str] = None):
     if not supabase:
         return JSONResponse(status_code=503, content={"error": "Database not configured"})
         
     try:
-        # Get shop id
-        shop = supabase.table("barbershops").select("id").eq("slug", slug).execute()
-        if not shop.data:
+        shop_id = await get_barbershop_id(slug)
+        if not shop_id:
             return []
-        shop_id = shop.data[0]['id']
 
         query = supabase.table("services").select("*").eq("barbershop_id", shop_id)
         if master_id:
@@ -675,18 +646,25 @@ async def get_services(slug: str = 'chop-pavlodar', master_id: Optional[str] = N
         print(f"Error fetching services: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-@app.post("/services")
-async def create_service(service: ServiceCreate):
-    data = service.dict()
-    if supabase:
-        try:
-            res = supabase.table("services").insert(data).execute()
-            return res.data[0]
-        except Exception as e:
-            return JSONResponse(status_code=500, content={"error": str(e)})
-    return JSONResponse(status_code=503, content={"error": "Database not configured"})
+@app.get("/api/admin/services")
+async def get_admin_services(slug: str = 'chop-pavlodar'):
+    return await get_services(slug)
 
-@app.put("/services/{id}", dependencies=[Depends(verify_admin)])
+@app.post("/api/admin/services")
+async def create_service(service: ServiceCreate, slug: str = 'chop-pavlodar'):
+    if not supabase:
+        return JSONResponse(status_code=503, content={"error": "Database not configured"})
+    
+    try:
+        shop_id = await get_barbershop_id(slug)
+        data = service.dict()
+        data['barbershop_id'] = shop_id
+        res = supabase.table("services").insert(data).execute()
+        return res.data[0]
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.put("/api/admin/services/{id}", dependencies=[Depends(verify_admin)])
 async def update_service(id: int, service: ServiceUpdate):
     data = {k: v for k, v in service.dict().items() if v is not None}
     
@@ -700,7 +678,7 @@ async def update_service(id: int, service: ServiceUpdate):
             return JSONResponse(status_code=500, content={"error": str(e)})
     return JSONResponse(status_code=503, content={"error": "Database not configured"})
 
-@app.delete("/services/{id}", dependencies=[Depends(verify_admin)])
+@app.delete("/api/admin/services/{id}", dependencies=[Depends(verify_admin)])
 async def delete_service(id: int):
     if supabase:
         try:
@@ -710,7 +688,7 @@ async def delete_service(id: int):
             return JSONResponse(status_code=500, content={"error": str(e)})
     return JSONResponse(status_code=503, content={"error": "Database not configured"})
 
-@app.delete("/bookings/{id}", dependencies=[Depends(verify_admin)])
+@app.delete("/api/bookings/{id}", dependencies=[Depends(verify_admin)])
 async def cancel_booking(id: str):
     if not supabase: return {"error": "DB not configured"}
     try:
@@ -720,7 +698,7 @@ async def cancel_booking(id: str):
             b = booking_res.data[0]
             
             # 1. Notify Master
-            master = supabase.table('barbers').select('telegram_id').eq('name', b['master']).execute()
+            master = supabase.table('barbers').select('telegram_id').eq('name', b['master']).eq('barbershop_id', b['barbershop_id']).execute()
             if master.data and master.data[0]['telegram_id']:
                 text_master = f"❌ Запись отменена\nКлиент: {b.get('client_name', 'ID: '+str(b['telegram_id']))}\nДата: {b['date']}\nВремя: {b['time']}\nУслуга: {b['service']}"
                 await send_telegram_message(BARBER_BOT_TOKEN, master.data[0]['telegram_id'], text_master)
@@ -730,31 +708,19 @@ async def cancel_booking(id: str):
                 text_client = f"❌ Ваша запись отменена\n\nМастер: {b['master']}\nУслуга: {b['service']}\nДата: {b['date']}\nВремя: {b['time']}"
                 await send_telegram_message(BOT_TOKEN, b['telegram_id'], text_client)
 
-        # Soft delete (update status) instead of hard delete, to keep history?
-        # But previous code did hard delete. 
-        # User prompt didn't specify. But hard delete removes clutter.
-        # However, earlier I saw duplicate endpoints. I should remove the duplicates.
-        # The duplicates were:
-        # 1. delete_booking(id: str) -> update status 'cancelled' (lines 470-479)
-        # 2. delete_booking(booking_id: str) -> update status 'cancelled' (lines 508-518)
-        # 3. cancel_booking(id: str) -> hard delete (lines 620-635)
-        # I will use THIS function (cancel_booking) as the single source of truth for DELETE /bookings/{id}.
-        # I will remove the other definitions in next step.
-        
         supabase.table('bookings').delete().eq('id', id).execute()
         return {"success": True}
     except Exception as e:
         print(f"Error cancelling booking: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-@app.get("/bookings/user")
+@app.get("/api/bookings/user")
 async def get_user_bookings(telegram_id: str, slug: str = 'chop-pavlodar'):
     if not supabase: return []
     try:
-        shop = supabase.table("barbershops").select("id").eq("slug", slug).execute()
-        if not shop.data:
+        shop_id = await get_barbershop_id(slug)
+        if not shop_id:
             return []
-        shop_id = shop.data[0]['id']
 
         # Get active bookings for user
         res = supabase.table('bookings')\
@@ -771,17 +737,46 @@ async def get_user_bookings(telegram_id: str, slug: str = 'chop-pavlodar'):
         print(f"Error fetching user bookings: {e}")
         return []
 
+# --- ADMIN STATS ---
+@app.get("/api/admin/stats")
+async def get_admin_stats(slug: str = 'chop-pavlodar'):
+    if not supabase: return {"error": "DB error"}
+    try:
+        shop_id = await get_barbershop_id(slug)
+        if not shop_id:
+            return {"error": "Barbershop not found"}
+
+        # Total bookings
+        total_res = supabase.table('bookings').select('id', count='exact').eq('barbershop_id', shop_id).execute()
+        total_count = total_res.count if hasattr(total_res, 'count') else len(total_res.data)
+
+        # Revenue
+        rev_res = supabase.table('bookings').select('price').eq('barbershop_id', shop_id).neq('status', 'cancelled').execute()
+        revenue = sum(b['price'] for b in rev_res.data)
+
+        # Active
+        active_res = supabase.table('bookings').select('id', count='exact').eq('barbershop_id', shop_id).eq('status', 'new').execute()
+        active_count = active_res.count if hasattr(active_res, 'count') else len(active_res.data)
+
+        return {
+            "total_bookings": total_count,
+            "revenue": revenue,
+            "active_bookings": active_count
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # --- BARBER API ---
-@app.get("/bookings/master-by-id")
+@app.get("/api/bookings/master-by-id")
 async def get_bookings_by_telegram_id(telegram_id: str, date: str = None, slug: str = 'chop-pavlodar'):
     if not supabase:
         return {"bookings": [], "barber": None}
     
     try:
-        shop = supabase.table("barbershops").select("id").eq("slug", slug).execute()
-        if not shop.data:
+        shop_id = await get_barbershop_id(slug)
+        if not shop_id:
             return {"bookings": [], "barber": None}
-        shop_id = shop.data[0]['id']
 
         # First find barber name by telegram_id
         barber = supabase.table('barbers').select('name').eq('telegram_id', telegram_id).eq('barbershop_id', shop_id).execute()
@@ -806,14 +801,13 @@ async def get_bookings_by_telegram_id(telegram_id: str, date: str = None, slug: 
         print(f"Error fetching bookings by master id: {e}")
         return {"bookings": [], "barber": None}
 
-@app.get("/barber/auth")
+@app.get("/api/barber/auth")
 async def barber_auth(telegram_id: str, slug: str = 'chop-pavlodar'):
     if not supabase: return {"error": "DB error"}
     try:
-        shop = supabase.table("barbershops").select("id").eq("slug", slug).execute()
-        if not shop.data:
+        shop_id = await get_barbershop_id(slug)
+        if not shop_id:
             return {"error": "Barbershop not found"}
-        shop_id = shop.data[0]['id']
 
         res = supabase.table('barbers').select('*').eq('telegram_id', telegram_id).eq('barbershop_id', shop_id).execute()
         if res.data:
@@ -823,14 +817,13 @@ async def barber_auth(telegram_id: str, slug: str = 'chop-pavlodar'):
     except Exception as e:
         return {"error": str(e)}
 
-@app.get("/barber/bookings")
+@app.get("/api/barber/bookings")
 async def get_barber_bookings(name: str, scope: str = 'today', slug: str = 'chop-pavlodar'):
     if not supabase: return []
     try:
-        shop = supabase.table("barbershops").select("id").eq("slug", slug).execute()
-        if not shop.data:
+        shop_id = await get_barbershop_id(slug)
+        if not shop_id:
             return []
-        shop_id = shop.data[0]['id']
 
         name = name.strip()
         
@@ -863,7 +856,7 @@ async def get_barber_bookings(name: str, scope: str = 'today', slug: str = 'chop
 class StatusUpdate(BaseModel):
     status: str
 
-@app.post("/barber/bookings/{id}")
+@app.post("/api/barber/bookings/{id}")
 async def update_booking_status(id: str, update: StatusUpdate):
     if not supabase: return {"error": "DB error"}
     try:
@@ -919,10 +912,11 @@ async def update_booking_status(id: str, update: StatusUpdate):
         print(f"Error updating status: {e}")
         return {"error": str(e)}
 
-@app.patch("/bookings/{booking_id}/done")
+@app.patch("/api/bookings/{booking_id}/done")
 async def mark_booking_done(booking_id: str):
     # Reuse update_booking_status logic
     return await update_booking_status(booking_id, StatusUpdate(status='done'))
+
 
 if __name__ == "__main__":
     import uvicorn

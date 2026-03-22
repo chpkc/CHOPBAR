@@ -442,12 +442,25 @@
     tg.ready();
     tg.expand();
 
+    const slug = tg.initDataUnsafe?.start_param || 'chop-pavlodar';
+
     let currentTab = 'today';
     let barberName = null;
     let allBookings = [];
     let masterId = null;
 
     async function init() {
+        // Fetch shop details based on slug
+        try {
+            const shopRes = await fetch(`/api/barbershop?slug=${slug}`);
+            if (shopRes.ok) {
+                const shop = await shopRes.json();
+                document.querySelector('header .header-label').innerText = `${shop.city.toUpperCase()} · ${shop.name.toUpperCase()}`;
+            }
+        } catch (e) {
+            console.error("Failed to load barbershop details", e);
+        }
+
         const params = new URLSearchParams(window.location.search);
         // Try getting master_id from URL first, then fallback to Telegram User ID
         const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -481,7 +494,7 @@
         try {
             // Fetch ALL bookings for this master to calculate stats correctly
             // We pass a timestamp to avoid caching
-            let url = `/bookings/master-by-id?telegram_id=${masterId}&t=${Date.now()}`;
+            let url = `/api/bookings/master-by-id?telegram_id=${masterId}&slug=${slug}&t=${Date.now()}`;
             
             const res = await fetch(url, { cache: "no-store" });
             const data = await res.json();
@@ -682,7 +695,7 @@
             if(idx !== -1) allBookings[idx].status = 'done';
             renderList();
             
-            await fetch(`/bookings/${id}/done`, { method: 'PATCH' });
+            await fetch(`/api/bookings/${id}/done`, { method: 'PATCH' });
             fetchBookings(true);
         } catch (e) {
             console.error(e);
@@ -699,7 +712,7 @@
             if(idx !== -1) allBookings[idx].status = 'cancelled';
             renderList();
             
-            await fetch(`/bookings/${id}`, { method: 'DELETE' });
+            await fetch(`/api/bookings/${id}`, { method: 'DELETE' });
             fetchBookings(true);
         } catch (e) {
             console.error(e);
