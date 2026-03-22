@@ -145,14 +145,15 @@ async def cmd_start(message: Message):
 
     from aiogram.types import WebAppInfo
     kb = [
-        [InlineKeyboardButton(text="🚀 ПОДКЛЮЧИТЬ БАРБЕРШОП", web_app=WebAppInfo(url=web_app_url))]
+        [InlineKeyboardButton(text="🚀 У меня есть код", web_app=WebAppInfo(url=web_app_url))]
     ]
     reply_markup = InlineKeyboardMarkup(inline_keyboard=kb)
     
     await message.answer(
-        "👋 Привет! Я CHOPBAR Partner Bot.\n\n"
-        "С моей помощью ты можешь подключить свой барбершоп к системе онлайн-записи.\n\n"
-        "Нажми кнопку ниже, чтобы начать.",
+        "👋 Привет!\n\n"
+        "Это бот для подключения барбершопа к системе CHOPBAR.\n\n"
+        "Чтобы получить инвайт-код — напиши: @cheepeek_c\n\n"
+        "Когда получишь код, нажми кнопку ниже 👇",
         reply_markup=reply_markup
     )
 
