@@ -265,17 +265,14 @@ async def register_barbershop(data: RegisterBarbershopModel):
         }).eq("id", invite_id).execute()
 
         return {
-            "status": "success",
-            "slug": slug,
-            "links": {
-                "client": f"t.me/ChopPavlodarBot?start={slug}",
-                "master": f"t.me/ChopCrewBot?start={slug}",
-                "admin": f"t.me/ChopPavlodarAdminBot?start={slug}"
-            }
+            "success": True,
+            "client_link": f"t.me/ChopPavlodarBot?start={slug}",
+            "crew_link": f"t.me/ChopCrewBot?start={slug}",
+            "admin_link": f"t.me/ChopPavlodarAdminBot?start={slug}"
         }
     except Exception as e:
         print(f"Error registering shop: {e}")
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 
 @app.get("/barbers")
 async def get_barbers(slug: str = 'chop-pavlodar'):

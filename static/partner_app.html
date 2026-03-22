@@ -145,17 +145,17 @@
 
         <div class="link-card">
             <div class="link-title">💈 Ссылка для клиентов</div>
-            <div class="link-url" id="link-client">t.me/bot?start=...</div>
+            <a class="link-url" id="link-client" style="color: var(--accent-gold); text-decoration: none;">t.me/bot?start=...</a>
         </div>
 
         <div class="link-card">
             <div class="link-title">👨‍💼 Ссылка для мастеров</div>
-            <div class="link-url" id="link-master">t.me/bot?start=...</div>
+            <a class="link-url" id="link-master" style="color: var(--accent-gold); text-decoration: none;">t.me/bot?start=...</a>
         </div>
 
         <div class="link-card">
             <div class="link-title">⚙️ Твоя админ-панель</div>
-            <div class="link-url" id="link-admin">t.me/bot?start=...</div>
+            <a class="link-url" id="link-admin" style="color: var(--accent-gold); text-decoration: none;">t.me/bot?start=...</a>
         </div>
 
         <div style="flex-grow: 1;"></div>
@@ -182,7 +182,7 @@
             const social = document.getElementById('input-social').value.trim();
 
             if (!name || !city || !phone) {
-                tg.showAlert("Пожалуйста, заполните все обязательные поля (Название, Город, Телефон).");
+                alert("Пожалуйста, заполните все обязательные поля (Название, Город, Телефон).");
                 return;
             }
 
@@ -202,12 +202,7 @@
             };
 
             try {
-                // Determine API URL based on current host
-                const apiUrl = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') 
-                    ? 'http://localhost:8000/api/register-barbershop' 
-                    : '/api/register-barbershop';
-
-                const res = await fetch(apiUrl, {
+                const res = await fetch('/api/register-barbershop', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -215,16 +210,19 @@
 
                 const data = await res.json();
 
-                if (res.ok) {
-                    document.getElementById('link-client').innerText = data.links.client;
-                    document.getElementById('link-master').innerText = data.links.master;
-                    document.getElementById('link-admin').innerText = data.links.admin;
+                if (data.success) {
+                    document.getElementById('link-client').innerText = data.client_link;
+                    document.getElementById('link-client').href = data.client_link;
+                    document.getElementById('link-master').innerText = data.crew_link;
+                    document.getElementById('link-master').href = data.crew_link;
+                    document.getElementById('link-admin').innerText = data.admin_link;
+                    document.getElementById('link-admin').href = data.admin_link;
                     showScreen('screen-success');
                 } else {
-                    tg.showAlert(data.error || "Произошла ошибка при регистрации.");
+                    alert(data.error || "Произошла ошибка при регистрации. Проверь инвайт-код.");
                 }
             } catch (err) {
-                tg.showAlert("Ошибка сети: " + err.message);
+                alert("Ошибка сети: " + err.message);
             } finally {
                 btnText.classList.remove('hidden');
                 btnLoader.classList.add('hidden');
