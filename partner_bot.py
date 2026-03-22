@@ -57,16 +57,30 @@ def generate_slug(name: str, city: str) -> str:
 
 @router.message(Command("invite"))
 async def cmd_invite(message: Message):
-    if message.from_user.id != SUPER_ADMIN_ID:
+    # Проверка, что команду вызвал суперадмин
+    if str(message.from_user.id) != str(SUPER_ADMIN_ID):
+        await message.answer("У вас нет прав для создания инвайтов.")
         return
-    
+        
     code = generate_invite_code()
+    
     try:
+        # Сохраняем инвайт в БД
         supabase.table("invites").insert({"code": code}).execute()
-        await message.answer(f"Новый инвайт код создан: `{code}`", parse_mode="Markdown")
+        
+        from aiogram.types import WebAppInfo
+        web_app = WebAppInfo(url=f"https://chopbar-production.up.railway.app/static/partner_app.html?invite={code}")
+        
+        await message.answer(
+            f"✅ Новый инвайт создан: `{code}`\n\nОтправь ссылку ниже владельцу барбершопа:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text="🚀 Зарегистрировать барбершоп", web_app=web_app)
+            ]])
+        )
     except Exception as e:
         logger.error(f"Error creating invite: {e}")
-        await message.answer("Ошибка при создании инвайта.")
+        await message.answer("❌ Ошибка при создании инвайта.")
 
 @router.message(Command("shops"))
 async def cmd_shops(message: Message):

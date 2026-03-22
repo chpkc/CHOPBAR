@@ -167,8 +167,8 @@
         tg.expand();
         tg.ready();
 
-        // Get invite_code from start_param if passed (e.g. t.me/bot?start=INVITECODE)
-        const inviteCode = tg.initDataUnsafe?.start_param || '';
+        const urlParams = new URLSearchParams(window.location.search);
+        const inviteCode = tg.initDataUnsafe?.start_param || urlParams.get('invite') || '';
 
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
