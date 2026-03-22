@@ -269,8 +269,7 @@ async def register_barbershop(data: RegisterBarbershopModel):
             "phone": data.phone,
             "instagram": data.instagram,
             "slug": slug,
-            "owner_telegram_id": data.owner_telegram_id,
-            "invite_id": invite_id
+            "owner_telegram_id": data.owner_telegram_id
         }
         supabase.table("barbershops").insert(shop_data).execute()
 
