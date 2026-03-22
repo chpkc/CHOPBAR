@@ -896,13 +896,13 @@
 
 <div id="app-root">
 
-    <!-- HOME SCREEN -->
+    <!-- SCREEN: HOME -->
     <div id="home-screen" class="screen active">
         <div class="hero-section stagger-item">
             <div class="deco-shape-tr"></div>
             <div class="deco-shape-bl"></div>
-            <span class="city-label">ПАВЛОДАР</span>
-            <h1 class="hero-title">CHOP<br><span>BAR.</span></h1>
+            <span class="city-label" id="hero-city-label">ЗАГРУЗКА...</span>
+            <h1 class="hero-title" id="hero-title">CHOP<br><span>BAR.</span></h1>
             <p class="hero-desc">Мужские стрижки, уход за бородой и укладки — для тех, кто ценит результат.</p>
             <button class="cta-button" onclick="navigateTo('step-master')">
                 Записаться
@@ -1130,6 +1130,21 @@
 
     // --- INIT ---
     async function init() {
+        // Fetch shop details based on slug
+        try {
+            const shopRes = await fetch(`/api/barbershop?slug=${slug}`);
+            if (shopRes.ok) {
+                const shop = await shopRes.json();
+                document.getElementById('hero-title').innerHTML = shop.name.toUpperCase().replace(' ', '<br><span>') + '</span>';
+                document.getElementById('hero-city-label').innerText = shop.city.toUpperCase();
+            } else {
+                document.getElementById('hero-title').innerHTML = 'CHOP<br><span>BAR.</span>';
+                document.getElementById('hero-city-label').innerText = 'ПАВЛОДАР';
+            }
+        } catch (e) {
+            console.error("Failed to load barbershop details", e);
+        }
+
         // Fetch user bookings first to show "My Bookings" button if needed
         await loadMyBookings();
         
