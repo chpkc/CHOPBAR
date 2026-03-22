@@ -1102,6 +1102,7 @@
 </div>
 
 <script>
+    console.log('START PARAM:', window.Telegram?.WebApp?.initDataUnsafe?.start_param);
     const tg = window.Telegram.WebApp;
     tg.ready();
     tg.expand();
@@ -1132,13 +1133,13 @@
     async function init() {
         // Fetch shop details based on slug
         try {
-            const shopRes = await fetch(`/api/barbershop?slug=${slug}`);
-            if (shopRes.ok) {
-                const shop = await shopRes.json();
+            const shop = await fetch(`/api/barbershop?slug=${slug}`).then(r => r.json());
+            if (shop && !shop.error) {
+                // Update dynamic names in HTML
                 document.getElementById('hero-title').innerHTML = shop.name.toUpperCase().replace(' ', '<br><span>') + '</span>';
                 document.getElementById('hero-city-label').innerText = shop.city.toUpperCase();
                 
-                // Update ticker if it exists
+                // Update ticker text
                 const tickerItems = document.querySelectorAll('.ticker-item');
                 tickerItems.forEach(item => {
                     item.innerText = `${shop.name.toUpperCase()} • ${shop.city.toUpperCase()} • МУЖСКИЕ СТРИЖКИ • `;
