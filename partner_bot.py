@@ -121,11 +121,10 @@ async def cmd_start(message: Message):
     if len(args) > 1:
         invite_code = args[1]
         
-    web_app_url = os.getenv("PARTNER_MINI_APP_URL", os.getenv("MINI_APP_URL", "https://example.com"))
-    if not web_app_url.endswith('/partner'):
-        # Just an example of how you might route it, or just use the root if your app serves partner_app.html there
-        web_app_url = web_app_url.rstrip('/') + '/partner'
-        
+    # URL to the actual Railway deployment
+    base_url = "https://chopbar-production.up.railway.app/static/partner_app.html"
+    web_app_url = base_url
+    
     # Append invite code to start_param so MiniApp can read it
     if invite_code:
         web_app_url += f"?startapp={invite_code}"
