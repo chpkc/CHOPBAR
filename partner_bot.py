@@ -114,142 +114,36 @@ async def cmd_revoke(message: Message):
 # --- REGISTRATION FSM ---
 
 @router.message(CommandStart())
-async def cmd_start(message: Message, state: FSMContext):
+async def cmd_start(message: Message):
+    # If the user passed an invite code via /start CODE
+    invite_code = ""
     args = message.text.split()
-    if len(args) < 2:
-        await message.answer("Пожалуйста, отправь команду с инвайт-кодом. Например: `/start CODE`", parse_mode="Markdown")
-        return
+    if len(args) > 1:
+        invite_code = args[1]
         
-    code = args[1]
+    web_app_url = os.getenv("PARTNER_MINI_APP_URL", os.getenv("MINI_APP_URL", "https://example.com"))
+    if not web_app_url.endswith('/partner'):
+        # Just an example of how you might route it, or just use the root if your app serves partner_app.html there
+        web_app_url = web_app_url.rstrip('/') + '/partner'
+        
+    # Append invite code to start_param so MiniApp can read it
+    if invite_code:
+        web_app_url += f"?startapp={invite_code}"
+
+    from aiogram.types import WebAppInfo
+    kb = [
+        [InlineKeyboardButton(text="🚀 ПОДКЛЮЧИТЬ БАРБЕРШОП", web_app=WebAppInfo(url=web_app_url))]
+    ]
+    reply_markup = InlineKeyboardMarkup(inline_keyboard=kb)
     
-    try:
-        res = supabase.table("invites").select("*").eq("code", code).execute()
-        invites = res.data
-        
-        if not invites or invites[0].get("used"):
-            await message.answer("❌ Инвайт недействителен или уже использован.\nНапиши нам: @chpk")
-            return
-            
-        await state.update_data(invite_id=invites[0]["id"])
-        await message.answer("Привет! Давай зарегистрируем твой барбершоп.\n\nКак называется твой барбершоп?")
-        await state.set_state(RegisterShop.name)
-        
-    except Exception as e:
-        logger.error(f"Error checking invite: {e}")
-        await message.answer("Произошла ошибка при проверке кода. Попробуйте позже.")
+    await message.answer(
+        "👋 Привет! Я CHOPBAR Partner Bot.\n\n"
+        "С моей помощью ты можешь подключить свой барбершоп к системе онлайн-записи.\n\n"
+        "Нажми кнопку ниже, чтобы начать.",
+        reply_markup=reply_markup
+    )
 
-@router.message(RegisterShop.name)
-async def process_name(message: Message, state: FSMContext):
-    if not message.text or not message.text.strip():
-        await message.answer("Пожалуйста, введи название текстом. Как называется твой барбершоп?")
-        return
-        
-    await state.update_data(name=message.text.strip())
-    await message.answer("Отлично! В каком городе?")
-    await state.set_state(RegisterShop.city)
 
-@router.message(RegisterShop.city)
-async def process_city(message: Message, state: FSMContext):
-    if not message.text or not message.text.strip():
-        await message.answer("Пожалуйста, введи город текстом. В каком городе находится барбершоп?")
-        return
-        
-    await state.update_data(city=message.text.strip())
-    await message.answer("Принято. Напиши номер телефона для связи?")
-    await state.set_state(RegisterShop.phone)
-
-@router.message(RegisterShop.phone)
-async def process_phone(message: Message, state: FSMContext):
-    if not message.text or not message.text.strip():
-        await message.answer("Пожалуйста, введи номер телефона текстом.")
-        return
-        
-    await state.update_data(phone=message.text.strip())
-    
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Пропустить", callback_data="skip_instagram")]
-    ])
-    
-    await message.answer("Супер! Отправь ссылку на Instagram или 2GIS (или нажми 'Пропустить')", reply_markup=kb)
-    await state.set_state(RegisterShop.instagram)
-
-async def finish_registration(message_or_call, state: FSMContext, instagram_link: str = ""):
-    data = await state.get_data()
-    name = data['name']
-    city = data['city']
-    phone = data['phone']
-    invite_id = data['invite_id']
-    
-    telegram_id = message_or_call.from_user.id
-    slug = generate_slug(name, city)
-    
-    # Ensure unique slug
-    base_slug = slug
-    counter = 1
-    while True:
-        res = supabase.table("barbershops").select("id").eq("slug", slug).execute()
-        if not res.data:
-            break
-        slug = f"{base_slug}-{counter}"
-        counter += 1
-        
-    try:
-        # Insert shop
-        shop_data = {
-            "name": name,
-            "city": city,
-            "phone": phone,
-            "instagram": instagram_link,
-            "slug": slug,
-            "owner_telegram_id": telegram_id
-        }
-        supabase.table("barbershops").insert(shop_data).execute()
-        
-        # Mark invite used
-        supabase.table("invites").update({
-            "used": True,
-            "used_by": telegram_id
-        }).eq("id", invite_id).execute()
-        
-        success_msg = (
-            "✅ Барбершоп подключён к CHOPBAR!\n\n"
-            f"💈 Ссылка для клиентов:\n"
-            f"t.me/ChopPavlodarBot?start={slug}\n\n"
-            f"👨‍💼 Ссылка для мастеров:\n"
-            f"t.me/ChopCrewBot?start={slug}\n\n"
-            f"⚙️ Твоя админ-панель:\n"
-            f"t.me/ChopPavlodarAdminBot?start={slug}\n\n"
-            "Сохрани эти ссылки — они твои навсегда."
-        )
-        
-        if isinstance(message_or_call, CallbackQuery):
-            await message_or_call.message.answer(success_msg)
-            await message_or_call.answer()
-        else:
-            await message_or_call.answer(success_msg)
-            
-        await state.clear()
-        
-    except Exception as e:
-        logger.error(f"Error saving shop: {e}")
-        error_msg = "Произошла ошибка при сохранении данных. Пожалуйста, обратитесь в поддержку."
-        if isinstance(message_or_call, CallbackQuery):
-            await message_or_call.message.answer(error_msg)
-            await message_or_call.answer()
-        else:
-            await message_or_call.answer(error_msg)
-
-@router.callback_query(F.data == "skip_instagram", RegisterShop.instagram)
-async def skip_instagram(call: CallbackQuery, state: FSMContext):
-    await finish_registration(call, state, "")
-
-@router.message(RegisterShop.instagram)
-async def process_instagram(message: Message, state: FSMContext):
-    if not message.text or not message.text.strip():
-        await message.answer("Отправь ссылку текстом или нажми 'Пропустить' на предыдущем сообщении.")
-        return
-        
-    await finish_registration(message, state, message.text.strip())
 
 async def start_partner_bot():
     if not PARTNER_BOT_TOKEN:

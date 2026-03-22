@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>CHOPBAR PARTNER.</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Unbounded:wght@400;500;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Partner Dark Theme */
+            --bg-color: #1C1C1C;
+            --primary-dark: #000000;
+            --accent-gold: #B8962E;
+            --text-main: #FFFFFF;
+            --text-muted: #888888;
+            --input-bg: #2C2C2C;
+            --border-color: #333333;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0; padding: 0;
+            height: 100vh; width: 100vw;
+            overflow: hidden;
+        }
+
+        h1, h2, h3, .font-heading { font-family: 'Unbounded', sans-serif; margin: 0; }
+        .hidden { display: none !important; }
+        
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column;
+            padding: 24px;
+            overflow-y: auto;
+        }
+        .screen.active { display: flex; }
+
+        /* --- HERO --- */
+        .city-label {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 10px; letter-spacing: 0.15em; color: var(--accent-gold);
+            margin-bottom: 24px; display: block;
+        }
+        .hero-title {
+            font-size: 48px; line-height: 1; font-weight: 900;
+            text-transform: uppercase; margin-bottom: 24px;
+        }
+        .hero-title span { color: var(--accent-gold); display: block; }
+        .hero-desc { color: var(--text-muted); font-size: 16px; line-height: 1.5; margin-bottom: 40px; }
+
+        /* --- FORM --- */
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .form-input {
+            width: 100%; background: var(--input-bg); border: 1px solid var(--border-color);
+            color: var(--text-main); padding: 16px; font-size: 16px; font-family: 'Inter', sans-serif;
+            outline: none; transition: border-color 0.2s;
+        }
+        .form-input:focus { border-color: var(--accent-gold); }
+
+        /* --- BUTTONS --- */
+        .cta-button {
+            background-color: var(--accent-gold); color: var(--primary-dark);
+            font-family: 'Unbounded', sans-serif; font-weight: 700; font-size: 14px;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            border: none; padding: 20px; width: 100%; cursor: pointer;
+            margin-top: auto; display: flex; justify-content: center; align-items: center; gap: 8px;
+        }
+        
+        .secondary-btn {
+            background: transparent; border: 1px solid var(--accent-gold);
+            color: var(--accent-gold); margin-top: 16px;
+        }
+
+        /* --- SUCCESS LINKS --- */
+        .link-card {
+            background: var(--input-bg); border: 1px solid var(--border-color);
+            padding: 16px; margin-bottom: 16px;
+        }
+        .link-title { font-size: 12px; color: var(--accent-gold); margin-bottom: 8px; text-transform: uppercase; }
+        .link-url { font-family: monospace; font-size: 14px; word-break: break-all; color: var(--text-main); }
+        
+        .loader {
+            display: inline-block; width: 20px; height: 20px;
+            border: 2px solid var(--primary-dark); border-bottom-color: transparent;
+            border-radius: 50%; animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- SCREEN 1: WELCOME -->
+    <div id="screen-welcome" class="screen active">
+        <span class="city-label">ПАВЛОДАР · CHOP</span>
+        <h1 class="hero-title">CHOPBAR<br><span>PARTNER.</span></h1>
+        <p class="hero-desc">Подключи свой барбершоп к системе онлайн-записи нового поколения.</p>
+        
+        <div style="flex-grow: 1;"></div>
+        <button class="cta-button" onclick="showScreen('screen-form')">НАЧАТЬ →</button>
+    </div>
+
+    <!-- SCREEN 2: FORM -->
+    <div id="screen-form" class="screen">
+        <h2 class="font-heading" style="font-size: 24px; margin-bottom: 32px;">РЕГИСТРАЦИЯ</h2>
+        
+        <div class="form-group">
+            <label class="form-label">Название барбершопа</label>
+            <input type="text" id="input-name" class="form-input" placeholder="Например: Black Beard">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Город</label>
+            <input type="text" id="input-city" class="form-input" placeholder="Например: Астана">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Номер телефона</label>
+            <input type="tel" id="input-phone" class="form-input" placeholder="+7 (___) ___-__-__">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Instagram или 2GIS (необязательно)</label>
+            <input type="text" id="input-social" class="form-input" placeholder="@username или ссылка">
+        </div>
+
+        <div style="flex-grow: 1;"></div>
+        <button id="btn-submit" class="cta-button" onclick="submitForm()">
+            <span id="btn-text">ПОДКЛЮЧИТЬ →</span>
+            <span id="btn-loader" class="loader hidden"></span>
+        </button>
+    </div>
+
+    <!-- SCREEN 3: SUCCESS -->
+    <div id="screen-success" class="screen">
+        <h2 class="font-heading" style="font-size: 24px; margin-bottom: 16px; color: var(--accent-gold);">✅ ПОДКЛЮЧЕНО!</h2>
+        <p style="color: var(--text-muted); margin-bottom: 32px;">Ваш барбершоп успешно зарегистрирован. Сохраните эти ссылки:</p>
+
+        <div class="link-card">
+            <div class="link-title">💈 Ссылка для клиентов</div>
+            <div class="link-url" id="link-client">t.me/bot?start=...</div>
+        </div>
+
+        <div class="link-card">
+            <div class="link-title">👨‍💼 Ссылка для мастеров</div>
+            <div class="link-url" id="link-master">t.me/bot?start=...</div>
+        </div>
+
+        <div class="link-card">
+            <div class="link-title">⚙️ Твоя админ-панель</div>
+            <div class="link-url" id="link-admin">t.me/bot?start=...</div>
+        </div>
+
+        <div style="flex-grow: 1;"></div>
+        <button class="cta-button secondary-btn" onclick="Telegram.WebApp.close()">ЗАКРЫТЬ</button>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        // Get invite_code from start_param if passed (e.g. t.me/bot?start=INVITECODE)
+        const inviteCode = tg.initDataUnsafe?.start_param || '';
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        async function submitForm() {
+            const name = document.getElementById('input-name').value.trim();
+            const city = document.getElementById('input-city').value.trim();
+            const phone = document.getElementById('input-phone').value.trim();
+            const social = document.getElementById('input-social').value.trim();
+
+            if (!name || !city || !phone) {
+                tg.showAlert("Пожалуйста, заполните все обязательные поля (Название, Город, Телефон).");
+                return;
+            }
+
+            const btnText = document.getElementById('btn-text');
+            const btnLoader = document.getElementById('btn-loader');
+            
+            btnText.classList.add('hidden');
+            btnLoader.classList.remove('hidden');
+
+            const payload = {
+                name: name,
+                city: city,
+                phone: phone,
+                instagram: social,
+                invite_code: inviteCode,
+                owner_telegram_id: tg.initDataUnsafe?.user?.id?.toString() || '0'
+            };
+
+            try {
+                // Determine API URL based on current host
+                const apiUrl = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') 
+                    ? 'http://localhost:8000/api/register-barbershop' 
+                    : '/api/register-barbershop';
+
+                const res = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    document.getElementById('link-client').innerText = data.links.client;
+                    document.getElementById('link-master').innerText = data.links.master;
+                    document.getElementById('link-admin').innerText = data.links.admin;
+                    showScreen('screen-success');
+                } else {
+                    tg.showAlert(data.error || "Произошла ошибка при регистрации.");
+                }
+            } catch (err) {
+                tg.showAlert("Ошибка сети: " + err.message);
+            } finally {
+                btnText.classList.remove('hidden');
+                btnLoader.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

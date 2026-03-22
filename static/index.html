@@ -1106,6 +1106,8 @@
     tg.ready();
     tg.expand();
 
+    const slug = tg.initDataUnsafe?.start_param || 'chop-pavlodar';
+
     // --- DATA ---
     const times = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
     let barbers = [];
@@ -1148,7 +1150,7 @@
     
     async function loadBarbers() {
         try {
-            const res = await fetch('/barbers');
+            const res = await fetch(`/barbers?slug=${slug}`);
             const data = await res.json();
             // Map data to match frontend format
             barbers = data.map(b => ({
@@ -1170,7 +1172,7 @@
 
     async function loadServices() {
         try {
-            const res = await fetch('/services');
+            const res = await fetch(`/services?slug=${slug}`);
             const data = await res.json();
             services = data.map(s => ({
                 name: sanitizeText(s.name),
@@ -1193,12 +1195,7 @@
         if (!user) return;
         
         try {
-            // Updated endpoint: we need to filter by telegram_id in API
-            // Currently API has /bookings/master-by-id, we need /bookings/user
-            // Let's assume we add it or use a query
-            // Since we don't have a dedicated user bookings endpoint yet, let's add it to API first?
-            // Or we can assume it exists. Let's create it in API next.
-            const res = await fetch(`/bookings/user?telegram_id=${user.id}`);
+            const res = await fetch(`/bookings/user?telegram_id=${user.id}&slug=${slug}`);
             if (res.ok) {
                 myBookings = await res.json();
                 updateMyBookingsUI();
@@ -1605,7 +1602,7 @@
         timeGrid.style.opacity = '0.5';
         
         try {
-            const res = await fetch(`/bookings/slots?master=${encodeURIComponent(masterName)}&date=${isoDate}`);
+            const res = await fetch(`/bookings/slots?master=${encodeURIComponent(masterName)}&date=${isoDate}&slug=${slug}`);
             const data = await res.json();
             const occupied = data.occupied || [];
             
@@ -1715,7 +1712,8 @@
             date: isoDate, // ISO for backend
             time: booking.time,
             duration: booking.service.duration,
-            telegram_id: tg.initDataUnsafe?.user?.id || "unknown"
+            telegram_id: tg.initDataUnsafe?.user?.id || "unknown",
+            slug: slug
         };
         
         try {
@@ -1873,7 +1871,7 @@
     async function loadActiveBooking() {
         const telegramId = tg.initDataUnsafe?.user?.id || 'unknown';
         try {
-            const res = await fetch(`/booking/active?telegram_id=${telegramId}`);
+            const res = await fetch(`/booking/active?telegram_id=${telegramId}&slug=${slug}`);
             const data = await res.json();
             
             if (data.booking) {
