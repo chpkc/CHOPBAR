@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 import os
 import logging
 from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
@@ -12,6 +12,7 @@ load_dotenv()
 
 BARBER_BOT_TOKEN = os.getenv("BARBER_BOT_TOKEN")
 MINI_APP_URL = os.getenv("MINI_APP_URL")
+APP_URL = os.getenv("APP_URL", "https://your-domain.up.railway.app")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
@@ -34,7 +35,7 @@ router = Router()
 async def start(message: types.Message):
     """Checks barber authentication and shows main menu."""
     if not supabase:
-        await message.answer("Ошибка подключения к базе данных.")
+        await message.answer("РћС€РёР±РєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ Рє Р±Р°Р·Рµ РґР°РЅРЅС‹С….")
         return
 
     user_id = str(message.from_user.id)
@@ -44,7 +45,7 @@ async def start(message: types.Message):
         result = supabase.table('barbers').select('name, barbershop_id').eq('telegram_id', user_id).execute()
         
         if not result.data:
-            await message.answer("⛔️ У вас нет доступа. Обратитесь к администратору.")
+            await message.answer("в›”пёЏ РЈ РІР°СЃ РЅРµС‚ РґРѕСЃС‚СѓРїР°. РћР±СЂР°С‚РёС‚РµСЃСЊ Рє Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂСѓ.")
             return
             
         barber_name = result.data[0]['name']
@@ -55,20 +56,20 @@ async def start(message: types.Message):
         slug = shop_res.data[0]['slug'] if shop_res.data else 'chop-pavlodar'
         
         # URL to the actual Railway deployment with parameters
-        app_url = f"https://chopbar-production.up.railway.app/static/barber.html?master_id={user_id}&slug={slug}"
+        app_url = f"{APP_URL}/static/barber.html?master_id={user_id}&slug={slug}"
         
         logger.info(f"Generated WebApp URL: {app_url}")
         
-        kb = [[KeyboardButton(text="✂️ Открыть рабочий стол", web_app=WebAppInfo(url=app_url))]]
+        kb = [[KeyboardButton(text="вњ‚пёЏ РћС‚РєСЂС‹С‚СЊ СЂР°Р±РѕС‡РёР№ СЃС‚РѕР»", web_app=WebAppInfo(url=app_url))]]
         
         await message.answer(
-            f"👋 Привет, {barber_name}!\nНажми кнопку ниже, чтобы открыть расписание.",
+            f"рџ‘‹ РџСЂРёРІРµС‚, {barber_name}!\nРќР°Р¶РјРё РєРЅРѕРїРєСѓ РЅРёР¶Рµ, С‡С‚РѕР±С‹ РѕС‚РєСЂС‹С‚СЊ СЂР°СЃРїРёСЃР°РЅРёРµ.",
             reply_markup=ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
         )
         
     except Exception as e:
         logger.error(f"Auth error: {e}")
-        await message.answer("Произошла ошибка при авторизации.")
+        await message.answer("РџСЂРѕРёР·РѕС€Р»Р° РѕС€РёР±РєР° РїСЂРё Р°РІС‚РѕСЂРёР·Р°С†РёРё.")
 
 async def main():
     if not BARBER_BOT_TOKEN:
@@ -85,3 +86,6 @@ async def main():
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
+
+
+

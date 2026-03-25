@@ -1,4 +1,4 @@
-import os
+﻿import os
 import json
 import re
 import datetime
@@ -94,8 +94,8 @@ class RegisterBarbershopModel(BaseModel):
 
 class BarberCreate(BaseModel):
     name: str
-    specialty: Optional[str] = "Мастер"
-    experience: Optional[str] = "1 год"
+    specialty: Optional[str] = "РњР°СЃС‚РµСЂ"
+    experience: Optional[str] = "1 РіРѕРґ"
     telegram_id: Optional[str] = None
     photo_url: Optional[str] = None
 
@@ -168,7 +168,7 @@ def get_formatted_system_prompt():
     prompt_template = load_system_prompt()
 
     barbers_str = "\n".join([f"- {b['name']} ({b['specialty']}, {b['experience']})" for b in data['barbers']])
-    services_str = "\n".join([f"- {s['name']}: {s['price']} ₸ ({s['duration_minutes']} min)" for s in data['services']])
+    services_str = "\n".join([f"- {s['name']}: {s['price']} в‚ё ({s['duration_minutes']} min)" for s in data['services']])
     hours_list = []
     for day, hours in data['hours'].items():
         day_formatted = day.replace('_', '-').title()
@@ -205,8 +205,16 @@ async def read_barber():
     with open("static/barber.html", "r", encoding="utf-8") as f:
         return f.read()
 
+
+# --- HELPER FUNCTIONS ---
+def get_count_from_response(response) -> int:
+    """Helper to extract count from Supabase response, handling both .count and len(data)"""
+    if hasattr(response, 'count') and response.count is not None:
+        return response.count
+    return len(response.data) if response.data else 0
+
 # --- HELPERS ---
-async def get_barbershop_id(slug: str) -> str:
+def get_barbershop_id(slug: str) -> str:
     if not supabase: return None
     try:
         res = supabase.table("barbershops").select("id").eq("slug", slug).execute()
@@ -251,17 +259,17 @@ async def register_barbershop(data: RegisterBarbershopModel):
         invites = res.data
         
         if not invites or invites[0].get("used"):
-            return JSONResponse(status_code=400, content={"error": "Инвайт недействителен или уже использован."})
+            return JSONResponse(status_code=400, content={"error": "РРЅРІР°Р№С‚ РЅРµРґРµР№СЃС‚РІРёС‚РµР»РµРЅ РёР»Рё СѓР¶Рµ РёСЃРїРѕР»СЊР·РѕРІР°РЅ."})
             
         invite_id = invites[0]["id"]
 
         # Generate slug
         translit_map = {
-            'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e', 'ж': 'zh',
-            'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o',
-            'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'ts',
-            'ч': 'ch', 'ш': 'sh', 'щ': 'shch', 'ъ': 'shch', 'ы': 'y', 'ь': '', 'э': 'e',
-            'ю': 'yu', 'я': 'ya', ' ': '-', '_': '-'
+            'Р°': 'a', 'Р±': 'b', 'РІ': 'v', 'Рі': 'g', 'Рґ': 'd', 'Рµ': 'e', 'С‘': 'e', 'Р¶': 'zh',
+            'Р·': 'z', 'Рё': 'i', 'Р№': 'y', 'Рє': 'k', 'Р»': 'l', 'Рј': 'm', 'РЅ': 'n', 'Рѕ': 'o',
+            'Рї': 'p', 'СЂ': 'r', 'СЃ': 's', 'С‚': 't', 'Сѓ': 'u', 'С„': 'f', 'С…': 'h', 'С†': 'ts',
+            'С‡': 'ch', 'С€': 'sh', 'С‰': 'shch', 'СЉ': 'shch', 'С‹': 'y', 'СЊ': '', 'СЌ': 'e',
+            'СЋ': 'yu', 'СЏ': 'ya', ' ': '-', '_': '-'
         }
         text_slug = f"{data.name} {data.city}".lower()
         slug = ''.join(translit_map.get(c, c) for c in text_slug)
@@ -309,7 +317,7 @@ async def register_barbershop(data: RegisterBarbershopModel):
 @app.get("/api/barbershop")
 async def get_barbershop(slug: str = 'chop-pavlodar'):
     if not supabase:
-        return {"name": "CHOP BAR", "city": "ПАВЛОДАР"}
+        return {"name": "CHOP BAR", "city": "РџРђР’Р›РћР”РђР "}
         
     try:
         res = supabase.table("barbershops").select("*").eq("slug", slug).execute()
@@ -321,17 +329,17 @@ async def get_barbershop(slug: str = 'chop-pavlodar'):
         if res.data:
             return res.data[0]
             
-        return {"name": "CHOP BAR", "city": "ПАВЛОДАР"}
+        return {"name": "CHOP BAR", "city": "РџРђР’Р›РћР”РђР "}
     except Exception as e:
         print(f"Error fetching barbershop: {e}")
-        return {"name": "CHOP BAR", "city": "ПАВЛОДАР"}
+        return {"name": "CHOP BAR", "city": "РџРђР’Р›РћР”РђР "}
 
 @app.get("/api/barbers")
 async def get_barbers(slug: str = 'chop-pavlodar'):
     if not supabase:
         return []
     try:
-        shop_id = await get_barbershop_id(slug)
+        shop_id = get_barbershop_id(slug)
         if not shop_id:
             return []
 
@@ -351,7 +359,7 @@ async def create_barber(barber: BarberCreate, slug: str = 'chop-pavlodar'):
         return JSONResponse(status_code=503, content={"error": "Database not configured"})
     
     try:
-        shop_id = await get_barbershop_id(slug)
+        shop_id = get_barbershop_id(slug)
         data = barber.dict(exclude_none=True)
         if 'name' in data:
             data['name'] = data['name'].strip()
@@ -362,9 +370,9 @@ async def create_barber(barber: BarberCreate, slug: str = 'chop-pavlodar'):
         
         # Notify Admin
         if ADMIN_BOT_TOKEN and ADMIN_IDS:
-            msg = (f"✅ Мастер {new_barber['name']} добавлен в систему.\n"
-                   f"Специализация: {new_barber.get('specialty', '-')}\n"
-                   f"Telegram ID: {new_barber.get('telegram_id') or 'не привязан'}")
+            msg = (f"вњ… РњР°СЃС‚РµСЂ {new_barber['name']} РґРѕР±Р°РІР»РµРЅ РІ СЃРёСЃС‚РµРјСѓ.\n"
+                   f"РЎРїРµС†РёР°Р»РёР·Р°С†РёСЏ: {new_barber.get('specialty', '-')}\n"
+                   f"Telegram ID: {new_barber.get('telegram_id') or 'РЅРµ РїСЂРёРІСЏР·Р°РЅ'}")
             await send_telegram_message(ADMIN_BOT_TOKEN, ADMIN_IDS[0], msg)
             
         return new_barber
@@ -429,14 +437,14 @@ async def delete_barber(id: str):
         future_bookings = bookings_res.data
         
         if future_bookings:
-            return JSONResponse(status_code=400, content={"error": "У мастера есть активные записи. Сначала отмените их."})
+            return JSONResponse(status_code=400, content={"error": "РЈ РјР°СЃС‚РµСЂР° РµСЃС‚СЊ Р°РєС‚РёРІРЅС‹Рµ Р·Р°РїРёСЃРё. РЎРЅР°С‡Р°Р»Р° РѕС‚РјРµРЅРёС‚Рµ РёС…."})
         
         # If no active bookings, delete
         supabase.table("barbers").delete().eq("id", id).execute()
         
         # Notify Admin
         if ADMIN_BOT_TOKEN and ADMIN_IDS:
-             msg = f"🗑 Мастер {barber_name} удалён."
+             msg = f"рџ—‘ РњР°СЃС‚РµСЂ {barber_name} СѓРґР°Р»С‘РЅ."
              await send_telegram_message(ADMIN_BOT_TOKEN, ADMIN_IDS[0], msg)
 
         return {"status": "deleted"}
@@ -475,7 +483,7 @@ async def create_booking(booking: BookingModel):
         return JSONResponse(status_code=503, content={"error": "Database not configured"})
 
     try:
-        shop_id = await get_barbershop_id(booking.slug)
+        shop_id = get_barbershop_id(booking.slug)
         if not shop_id:
             return JSONResponse(status_code=404, content={"error": "Barbershop not found"})
 
@@ -487,7 +495,7 @@ async def create_booking(booking: BookingModel):
                 
                 now = datetime.datetime.now(local_tz)
                 if booking_dt < now:
-                     return JSONResponse(status_code=400, content={"error": "Нельзя записаться на прошедшее время"})
+                     return JSONResponse(status_code=400, content={"error": "РќРµР»СЊР·СЏ Р·Р°РїРёСЃР°С‚СЊСЃСЏ РЅР° РїСЂРѕС€РµРґС€РµРµ РІСЂРµРјСЏ"})
             except ValueError:
                 pass
 
@@ -501,7 +509,7 @@ async def create_booking(booking: BookingModel):
             .execute()
             
         if existing.data:
-            return JSONResponse(status_code=409, content={"error": "Это время уже занято. Пожалуйста, выберите другое."})
+            return JSONResponse(status_code=409, content={"error": "Р­С‚Рѕ РІСЂРµРјСЏ СѓР¶Рµ Р·Р°РЅСЏС‚Рѕ. РџРѕР¶Р°Р»СѓР№СЃС‚Р°, РІС‹Р±РµСЂРёС‚Рµ РґСЂСѓРіРѕРµ."})
 
         data = booking.dict(exclude={'force', 'slug'})
         data['id'] = str(uuid.uuid4())
@@ -518,13 +526,13 @@ async def create_booking(booking: BookingModel):
         master = supabase.table('barbers').select('telegram_id').eq('name', booking.master).eq('barbershop_id', shop_id).execute()
         if master.data and master.data[0].get('telegram_id'):
               master_tg = master.data[0]['telegram_id']
-              text = f"📅 Новая запись!\nУслуга: {booking.service}\nДата: {booking.date}\nВремя: {booking.time}\nКлиент ID: {booking.telegram_id}"
+              text = f"рџ“… РќРѕРІР°СЏ Р·Р°РїРёСЃСЊ!\nРЈСЃР»СѓРіР°: {booking.service}\nР”Р°С‚Р°: {booking.date}\nР’СЂРµРјСЏ: {booking.time}\nРљР»РёРµРЅС‚ ID: {booking.telegram_id}"
               # Send to BARBER bot
               await send_telegram_message(ADMIN_BOT_TOKEN, master_tg, text) # Using ADMIN_BOT_TOKEN as BARBER_BOT_TOKEN fallback
 
         # 2. Notify Client
         if str(booking.telegram_id).isdigit():
-            client_text = f"✅ Вы успешно записаны!\n\n💈 Мастер: {booking.master}\n💇‍♂️ Услуга: {booking.service}\n🗓 Дата: {booking.date}\n⏰ Время: {booking.time}\n💰 Цена: {booking.price}₸"
+            client_text = f"вњ… Р’С‹ СѓСЃРїРµС€РЅРѕ Р·Р°РїРёСЃР°РЅС‹!\n\nрџ’€ РњР°СЃС‚РµСЂ: {booking.master}\nрџ’‡вЂЌв™‚пёЏ РЈСЃР»СѓРіР°: {booking.service}\nрџ—“ Р”Р°С‚Р°: {booking.date}\nвЏ° Р’СЂРµРјСЏ: {booking.time}\nрџ’° Р¦РµРЅР°: {booking.price}в‚ё"
             await send_telegram_message(BOT_TOKEN, booking.telegram_id, client_text)
 
         return {"status": "success", "data": res.data[0]}
@@ -536,7 +544,7 @@ async def create_booking(booking: BookingModel):
 async def get_admin_bookings(slug: str = 'chop-pavlodar'):
     if not supabase: return []
     try:
-        shop_id = await get_barbershop_id(slug)
+        shop_id = get_barbershop_id(slug)
         if not shop_id:
             return []
 
@@ -550,7 +558,7 @@ async def get_admin_bookings(slug: str = 'chop-pavlodar'):
 async def get_bookings(slug: str = 'chop-pavlodar'):
     if supabase:
         try:
-            shop_id = await get_barbershop_id(slug)
+            shop_id = get_barbershop_id(slug)
             if not shop_id:
                 return []
 
@@ -568,7 +576,7 @@ async def get_occupied_slots(master: str, date: str, slug: str = 'chop-pavlodar'
     if not supabase:
         return {"occupied": []}
     try:
-        shop_id = await get_barbershop_id(slug)
+        shop_id = get_barbershop_id(slug)
         if not shop_id:
             return {"occupied": []}
 
@@ -589,7 +597,7 @@ async def get_active_booking(telegram_id: str, slug: str = 'chop-pavlodar'):
     if not supabase:
         return {"booking": None}
     try:
-        shop_id = await get_barbershop_id(slug)
+        shop_id = get_barbershop_id(slug)
         if not shop_id:
             return {"booking": None}
 
@@ -633,7 +641,7 @@ async def get_services(slug: str = 'chop-pavlodar', master_id: Optional[str] = N
         return JSONResponse(status_code=503, content={"error": "Database not configured"})
         
     try:
-        shop_id = await get_barbershop_id(slug)
+        shop_id = get_barbershop_id(slug)
         if not shop_id:
             return []
 
@@ -657,7 +665,7 @@ async def create_service(service: ServiceCreate, slug: str = 'chop-pavlodar'):
         return JSONResponse(status_code=503, content={"error": "Database not configured"})
     
     try:
-        shop_id = await get_barbershop_id(slug)
+        shop_id = get_barbershop_id(slug)
         data = service.dict()
         data['barbershop_id'] = shop_id
         res = supabase.table("services").insert(data).execute()
@@ -701,12 +709,12 @@ async def cancel_booking(id: str):
             # 1. Notify Master
             master = supabase.table('barbers').select('telegram_id').eq('name', b['master']).eq('barbershop_id', b['barbershop_id']).execute()
             if master.data and master.data[0]['telegram_id']:
-                text_master = f"❌ Запись отменена\nКлиент: {b.get('client_name', 'ID: '+str(b['telegram_id']))}\nДата: {b['date']}\nВремя: {b['time']}\nУслуга: {b['service']}"
+                text_master = f"вќЊ Р—Р°РїРёСЃСЊ РѕС‚РјРµРЅРµРЅР°\nРљР»РёРµРЅС‚: {b.get('client_name', 'ID: '+str(b['telegram_id']))}\nР”Р°С‚Р°: {b['date']}\nР’СЂРµРјСЏ: {b['time']}\nРЈСЃР»СѓРіР°: {b['service']}"
                 await send_telegram_message(BARBER_BOT_TOKEN, master.data[0]['telegram_id'], text_master)
 
             # 2. Notify Client (if it was their booking and they have ID)
             if str(b['telegram_id']).isdigit():
-                text_client = f"❌ Ваша запись отменена\n\nМастер: {b['master']}\nУслуга: {b['service']}\nДата: {b['date']}\nВремя: {b['time']}"
+                text_client = f"вќЊ Р’Р°С€Р° Р·Р°РїРёСЃСЊ РѕС‚РјРµРЅРµРЅР°\n\nРњР°СЃС‚РµСЂ: {b['master']}\nРЈСЃР»СѓРіР°: {b['service']}\nР”Р°С‚Р°: {b['date']}\nР’СЂРµРјСЏ: {b['time']}"
                 await send_telegram_message(BOT_TOKEN, b['telegram_id'], text_client)
 
         supabase.table('bookings').delete().eq('id', id).execute()
@@ -719,7 +727,7 @@ async def cancel_booking(id: str):
 async def get_user_bookings(telegram_id: str, slug: str = 'chop-pavlodar'):
     if not supabase: return []
     try:
-        shop_id = await get_barbershop_id(slug)
+        shop_id = get_barbershop_id(slug)
         if not shop_id:
             return []
 
@@ -743,13 +751,13 @@ async def get_user_bookings(telegram_id: str, slug: str = 'chop-pavlodar'):
 async def get_admin_stats(slug: str = 'chop-pavlodar'):
     if not supabase: return {"error": "DB error"}
     try:
-        shop_id = await get_barbershop_id(slug)
+        shop_id = get_barbershop_id(slug)
         if not shop_id:
             return {"error": "Barbershop not found"}
 
         # Total bookings
         total_res = supabase.table('bookings').select('id', count='exact').eq('barbershop_id', shop_id).execute()
-        total_count = total_res.count if hasattr(total_res, 'count') else len(total_res.data)
+        total_count = get_count_from_response(total_res)
 
         # Revenue
         rev_res = supabase.table('bookings').select('price').eq('barbershop_id', shop_id).neq('status', 'cancelled').execute()
@@ -757,7 +765,7 @@ async def get_admin_stats(slug: str = 'chop-pavlodar'):
 
         # Active
         active_res = supabase.table('bookings').select('id', count='exact').eq('barbershop_id', shop_id).eq('status', 'new').execute()
-        active_count = active_res.count if hasattr(active_res, 'count') else len(active_res.data)
+        active_count = get_count_from_response(active_res)
 
         return {
             "total_bookings": total_count,
@@ -775,7 +783,7 @@ async def get_bookings_by_telegram_id(telegram_id: str, date: str = None, slug: 
         return {"bookings": [], "barber": None}
     
     try:
-        shop_id = await get_barbershop_id(slug)
+        shop_id = get_barbershop_id(slug)
         if not shop_id:
             return {"bookings": [], "barber": None}
 
@@ -806,7 +814,7 @@ async def get_bookings_by_telegram_id(telegram_id: str, date: str = None, slug: 
 async def barber_auth(telegram_id: str, slug: str = 'chop-pavlodar'):
     if not supabase: return {"error": "DB error"}
     try:
-        shop_id = await get_barbershop_id(slug)
+        shop_id = get_barbershop_id(slug)
         if not shop_id:
             return {"error": "Barbershop not found"}
 
@@ -822,7 +830,7 @@ async def barber_auth(telegram_id: str, slug: str = 'chop-pavlodar'):
 async def get_barber_bookings(name: str, scope: str = 'today', slug: str = 'chop-pavlodar'):
     if not supabase: return []
     try:
-        shop_id = await get_barbershop_id(slug)
+        shop_id = get_barbershop_id(slug)
         if not shop_id:
             return []
 
@@ -882,23 +890,23 @@ async def update_booking_status(id: str, update: StatusUpdate):
             markup = None
             
             if update.status == 'done':
-                master_name = b.get('master', 'Мастер')
+                master_name = b.get('master', 'РњР°СЃС‚РµСЂ')
                 msg = (
-                    f"✂️ {master_name} завершил твою стрижку!\n\n"
-                    f"Спасибо что доверился нам — это всегда приятно 🤝\n"
-                    f"Надеемся увидеть тебя снова в CHOP BAR.\n\n"
-                    f"Если понравилось — возвращайся, мы всегда здесь 💈"
+                    f"вњ‚пёЏ {master_name} Р·Р°РІРµСЂС€РёР» С‚РІРѕСЋ СЃС‚СЂРёР¶РєСѓ!\n\n"
+                    f"РЎРїР°СЃРёР±Рѕ С‡С‚Рѕ РґРѕРІРµСЂРёР»СЃСЏ РЅР°Рј вЂ” СЌС‚Рѕ РІСЃРµРіРґР° РїСЂРёСЏС‚РЅРѕ рџ¤ќ\n"
+                    f"РќР°РґРµРµРјСЃСЏ СѓРІРёРґРµС‚СЊ С‚РµР±СЏ СЃРЅРѕРІР° РІ CHOP BAR.\n\n"
+                    f"Р•СЃР»Рё РїРѕРЅСЂР°РІРёР»РѕСЃСЊ вЂ” РІРѕР·РІСЂР°С‰Р°Р№СЃСЏ, РјС‹ РІСЃРµРіРґР° Р·РґРµСЃСЊ рџ’€"
                 )
                 if MINI_APP_URL:
                      markup = {
                         "inline_keyboard": [[
-                            {"text": "Записаться снова 💈", "web_app": {"url": MINI_APP_URL}}
+                            {"text": "Р—Р°РїРёСЃР°С‚СЊСЃСЏ СЃРЅРѕРІР° рџ’€", "web_app": {"url": MINI_APP_URL}}
                         ]]
                      }
             elif update.status == 'cancelled':
-                 msg = f"❌ Ваша запись отменена мастером.\n\nМастер: {b['master']}\nДата: {b['date']}\nВремя: {b['time']}"
+                 msg = f"вќЊ Р’Р°С€Р° Р·Р°РїРёСЃСЊ РѕС‚РјРµРЅРµРЅР° РјР°СЃС‚РµСЂРѕРј.\n\nРњР°СЃС‚РµСЂ: {b['master']}\nР”Р°С‚Р°: {b['date']}\nР’СЂРµРјСЏ: {b['time']}"
             elif update.status == 'confirmed':
-                 msg = f"✅ Ваша запись подтверждена мастером!\n\nЖдем вас {b['date']} в {b['time']}."
+                 msg = f"вњ… Р’Р°С€Р° Р·Р°РїРёСЃСЊ РїРѕРґС‚РІРµСЂР¶РґРµРЅР° РјР°СЃС‚РµСЂРѕРј!\n\nР–РґРµРј РІР°СЃ {b['date']} РІ {b['time']}."
             
             if msg:
                 print(f"DEBUG: Sending message to {client_id}: {msg[:20]}...")
@@ -922,3 +930,6 @@ async def mark_booking_done(booking_id: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+

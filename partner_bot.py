@@ -1,4 +1,4 @@
-import os
+﻿import os
 import logging
 import re
 import string
@@ -18,6 +18,7 @@ PARTNER_BOT_TOKEN = os.getenv("PARTNER_BOT_TOKEN")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 SUPER_ADMIN_ID = int(os.getenv("SUPER_ADMIN_ID", "0"))
+APP_URL = os.getenv("APP_URL", "https://your-domain.up.railway.app")
 
 logger = logging.getLogger(__name__)
 
@@ -40,11 +41,11 @@ def generate_invite_code():
 def generate_slug(name: str, city: str) -> str:
     # Basic transliteration map
     translit_map = {
-        'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e', 'ж': 'zh',
-        'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o',
-        'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'ts',
-        'ч': 'ch', 'ш': 'sh', 'щ': 'shch', 'ъ': 'shch', 'ы': 'y', 'ь': '', 'э': 'e',
-        'ю': 'yu', 'я': 'ya', ' ': '-', '_': '-'
+        'Р°': 'a', 'Р±': 'b', 'РІ': 'v', 'Рі': 'g', 'Рґ': 'd', 'Рµ': 'e', 'С‘': 'e', 'Р¶': 'zh',
+        'Р·': 'z', 'Рё': 'i', 'Р№': 'y', 'Рє': 'k', 'Р»': 'l', 'Рј': 'm', 'РЅ': 'n', 'Рѕ': 'o',
+        'Рї': 'p', 'СЂ': 'r', 'СЃ': 's', 'С‚': 't', 'Сѓ': 'u', 'С„': 'f', 'С…': 'h', 'С†': 'ts',
+        'С‡': 'ch', 'С€': 'sh', 'С‰': 'shch', 'СЉ': 'shch', 'С‹': 'y', 'СЊ': '', 'СЌ': 'e',
+        'СЋ': 'yu', 'СЏ': 'ya', ' ': '-', '_': '-'
     }
     
     text = f"{name} {city}".lower()
@@ -57,30 +58,30 @@ def generate_slug(name: str, city: str) -> str:
 
 @router.message(Command("invite"))
 async def cmd_invite(message: Message):
-    # Проверка, что команду вызвал суперадмин
+    # РџСЂРѕРІРµСЂРєР°, С‡С‚Рѕ РєРѕРјР°РЅРґСѓ РІС‹Р·РІР°Р» СЃСѓРїРµСЂР°РґРјРёРЅ
     if str(message.from_user.id) != str(SUPER_ADMIN_ID):
-        await message.answer("У вас нет прав для создания инвайтов.")
+        await message.answer("РЈ РІР°СЃ РЅРµС‚ РїСЂР°РІ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РёРЅРІР°Р№С‚РѕРІ.")
         return
         
     code = generate_invite_code()
     
     try:
-        # Сохраняем инвайт в БД
+        # РЎРѕС…СЂР°РЅСЏРµРј РёРЅРІР°Р№С‚ РІ Р‘Р”
         supabase.table("invites").insert({"code": code}).execute()
         
         from aiogram.types import WebAppInfo
-        web_app = WebAppInfo(url=f"https://chopbar-production.up.railway.app/static/partner_app.html?invite={code}")
+        web_app = WebAppInfo(url=f"{APP_URL}/static/partner_app.html?invite={code}")
         
         await message.answer(
-            f"✅ Новый инвайт создан: `{code}`\n\nОтправь ссылку ниже владельцу барбершопа:",
+            f"вњ… РќРѕРІС‹Р№ РёРЅРІР°Р№С‚ СЃРѕР·РґР°РЅ: `{code}`\n\nРћС‚РїСЂР°РІСЊ СЃСЃС‹Р»РєСѓ РЅРёР¶Рµ РІР»Р°РґРµР»СЊС†Сѓ Р±Р°СЂР±РµСЂС€РѕРїР°:",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text="🚀 Зарегистрировать барбершоп", web_app=web_app)
+                InlineKeyboardButton(text="рџљЂ Р—Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°С‚СЊ Р±Р°СЂР±РµСЂС€РѕРї", web_app=web_app)
             ]])
         )
     except Exception as e:
         logger.error(f"Error creating invite: {e}")
-        await message.answer("❌ Ошибка при создании инвайта.")
+        await message.answer("вќЊ РћС€РёР±РєР° РїСЂРё СЃРѕР·РґР°РЅРёРё РёРЅРІР°Р№С‚Р°.")
 
 @router.message(Command("shops"))
 async def cmd_shops(message: Message):
@@ -91,18 +92,18 @@ async def cmd_shops(message: Message):
         res = supabase.table("barbershops").select("*").execute()
         shops = res.data
         if not shops:
-            await message.answer("Нет зарегистрированных барбершопов.")
+            await message.answer("РќРµС‚ Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅРЅС‹С… Р±Р°СЂР±РµСЂС€РѕРїРѕРІ.")
             return
             
-        text = "Список барбершопов:\n\n"
+        text = "РЎРїРёСЃРѕРє Р±Р°СЂР±РµСЂС€РѕРїРѕРІ:\n\n"
         for shop in shops:
             date_str = shop['created_at'].split('T')[0] if shop.get('created_at') else 'N/A'
-            text += f"💈 {shop['name']} ({shop['city']}) - {date_str}\nSlug: {shop['slug']}\n\n"
+            text += f"рџ’€ {shop['name']} ({shop['city']}) - {date_str}\nSlug: {shop['slug']}\n\n"
             
         await message.answer(text)
     except Exception as e:
         logger.error(f"Error fetching shops: {e}")
-        await message.answer("Ошибка при получении списка.")
+        await message.answer("РћС€РёР±РєР° РїСЂРё РїРѕР»СѓС‡РµРЅРёРё СЃРїРёСЃРєР°.")
 
 @router.message(Command("revoke"))
 async def cmd_revoke(message: Message):
@@ -111,19 +112,19 @@ async def cmd_revoke(message: Message):
     
     parts = message.text.split()
     if len(parts) != 2:
-        await message.answer("Использование: /revoke КОД")
+        await message.answer("РСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ: /revoke РљРћР”")
         return
         
     code = parts[1]
     try:
         res = supabase.table("invites").update({"used": True}).eq("code", code).execute()
         if res.data:
-            await message.answer(f"Инвайт {code} отозван (помечен использованным).")
+            await message.answer(f"РРЅРІР°Р№С‚ {code} РѕС‚РѕР·РІР°РЅ (РїРѕРјРµС‡РµРЅ РёСЃРїРѕР»СЊР·РѕРІР°РЅРЅС‹Рј).")
         else:
-            await message.answer("Код не найден.")
+            await message.answer("РљРѕРґ РЅРµ РЅР°Р№РґРµРЅ.")
     except Exception as e:
         logger.error(f"Error revoking invite: {e}")
-        await message.answer("Ошибка при отзыве инвайта.")
+        await message.answer("РћС€РёР±РєР° РїСЂРё РѕС‚Р·С‹РІРµ РёРЅРІР°Р№С‚Р°.")
 
 # --- REGISTRATION FSM ---
 
@@ -136,7 +137,7 @@ async def cmd_start(message: Message):
         invite_code = args[1]
         
     # URL to the actual Railway deployment
-    base_url = "https://chopbar-production.up.railway.app/static/partner_app.html"
+    base_url = "{APP_URL}/static/partner_app.html"
     web_app_url = base_url
     
     # Append invite code to URL query parameter
@@ -148,15 +149,15 @@ async def cmd_start(message: Message):
 
     from aiogram.types import WebAppInfo
     kb = [
-        [InlineKeyboardButton(text="🚀 У меня есть код", web_app=WebAppInfo(url=web_app_url))]
+        [InlineKeyboardButton(text="рџљЂ РЈ РјРµРЅСЏ РµСЃС‚СЊ РєРѕРґ", web_app=WebAppInfo(url=web_app_url))]
     ]
     reply_markup = InlineKeyboardMarkup(inline_keyboard=kb)
     
     await message.answer(
-        "👋 Привет!\n\n"
-        "Это бот для подключения барбершопа к системе CHOPBAR.\n\n"
-        "Чтобы получить инвайт-код — напиши: @cheepeek_c\n\n"
-        "Когда получишь код, нажми кнопку ниже 👇",
+        "рџ‘‹ РџСЂРёРІРµС‚!\n\n"
+        "Р­С‚Рѕ Р±РѕС‚ РґР»СЏ РїРѕРґРєР»СЋС‡РµРЅРёСЏ Р±Р°СЂР±РµСЂС€РѕРїР° Рє СЃРёСЃС‚РµРјРµ CHOPBAR.\n\n"
+        "Р§С‚РѕР±С‹ РїРѕР»СѓС‡РёС‚СЊ РёРЅРІР°Р№С‚-РєРѕРґ вЂ” РЅР°РїРёС€Рё: @cheepeek_c\n\n"
+        "РљРѕРіРґР° РїРѕР»СѓС‡РёС€СЊ РєРѕРґ, РЅР°Р¶РјРё РєРЅРѕРїРєСѓ РЅРёР¶Рµ рџ‘‡",
         reply_markup=reply_markup
     )
 
@@ -164,7 +165,7 @@ async def cmd_start(message: Message):
 
 async def start_partner_bot():
     if not PARTNER_BOT_TOKEN:
-        logger.error("PARTNER_BOT_TOKEN не найден!")
+        logger.error("PARTNER_BOT_TOKEN РЅРµ РЅР°Р№РґРµРЅ!")
         return
         
     bot = Bot(token=PARTNER_BOT_TOKEN)
@@ -177,3 +178,5 @@ async def start_partner_bot():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     asyncio.run(start_partner_bot())
+
+
