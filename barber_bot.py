@@ -1,4 +1,6 @@
-﻿#!/usr/bin/env python3
+﻿# -*- coding: utf-8 -*-
+
+#!/usr/bin/env python3
 import os
 import logging
 from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
