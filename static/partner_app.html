@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CHOPBAR PARTNER</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>CHOPBAR Партнер</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,13 +18,9 @@
             --text-muted: #666666;
             --border-color: #E0E0E0;
             --error-color: #D32F2F;
+            --success-color: #388E3C;
         }
-
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
@@ -34,387 +30,238 @@
             height: 100vh;
             width: 100vw;
             overflow: hidden;
-            position: relative;
         }
-
-        h1, h2, h3 {
-            font-family: 'Unbounded', sans-serif;
-            margin: 0;
-        }
-
+        h1, h2, h3 { font-family: 'Unbounded', sans-serif; margin: 0; }
         .screen {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            padding: 24px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
-            transition: opacity 0.3s ease, transform 0.3s ease;
             opacity: 1;
             transform: translateY(0);
             z-index: 1;
+            transition: all 0.3s ease;
         }
-
         .screen.hidden {
             opacity: 0;
             transform: translateY(20px);
             pointer-events: none;
             z-index: 0;
         }
-
-        /* --- SCREEN 1: INVITE --- */
-        .logo-text {
-            font-size: 32px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: -1px;
-            margin-bottom: 40px;
-            text-align: center;
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
         }
-        
-        .welcome-title {
-            font-size: 24px;
+        .logo { font-size: 24px; font-weight: 900; text-transform: uppercase; }
+        .shop-name { font-size: 14px; color: var(--text-muted); }
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
             margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
-        
-        .subtitle {
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
             color: var(--text-muted);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+        /* Status toggle */
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .status-open { background: #E8F5E9; color: var(--success-color); }
+        .status-closed { background: #FFEBEE; color: var(--error-color); }
+        .toggle-btn {
+            background: var(--accent-gold);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        /* Input lists */
+        .input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .input-field {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
             font-size: 15px;
-            line-height: 1.4;
-            margin-bottom: 32px;
+            outline: none;
         }
-
-        .invite-input-wrapper {
-            margin-bottom: 16px;
-            position: relative;
+        .input-field:focus { border-color: var(--accent-gold); }
+        .add-btn {
+            background: var(--accent-gold);
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
         }
-
+        .item-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: var(--bg-color);
+            border-radius: 6px;
+            margin-bottom: 6px;
+        }
+        .item-id { font-family: monospace; font-size: 14px; }
+        .remove-btn {
+            background: none;
+            border: none;
+            color: var(--error-color);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px;
+        }
+        /* Invite screen */
         .invite-input {
             width: 100%;
             background: var(--card-bg);
             border: 2px solid var(--border-color);
             border-radius: 12px;
-            padding: 20px;
-            font-size: 24px;
-            font-weight: 700;
+            padding: 18px;
+            font-size: 18px;
             text-align: center;
-            letter-spacing: 4px;
-            color: var(--primary-dark);
+            letter-spacing: 2px;
             text-transform: uppercase;
-            outline: none;
-            transition: border-color 0.2s;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-        }
-
-        .invite-input:focus {
-            border-color: var(--accent-gold);
-        }
-
-        .invite-input::placeholder {
-            color: #CCCCCC;
-            font-weight: 400;
-            letter-spacing: normal;
-        }
-
-        .error-text {
-            color: var(--error-color);
-            font-size: 13px;
-            text-align: center;
-            min-height: 18px;
-            margin-bottom: auto;
-            font-weight: 500;
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-8px); }
-            75% { transform: translateX(8px); }
-        }
-        .shake {
-            animation: shake 0.4s ease-in-out;
-            border-color: var(--error-color) !important;
-        }
-
-        .support-link {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 14px;
-            margin-top: 24px;
-        }
-        .support-link a {
-            color: var(--accent-gold);
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        /* --- SCREEN 2: FORM --- */
-        .nav-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-        .back-btn {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 0;
-        }
-        
-        .form-title {
-            font-size: 24px;
-            line-height: 1.2;
-            margin-bottom: 32px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-        .form-label span {
-            color: var(--error-color);
-        }
-        .form-input {
-            width: 100%;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 16px;
-            font-size: 16px;
-            font-family: 'Inter', sans-serif;
-            color: var(--primary-dark);
-            outline: none;
-            transition: all 0.2s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-        }
-        .form-input:focus {
-            border-color: var(--accent-gold);
-            box-shadow: 0 4px 12px rgba(184, 150, 46, 0.1);
-        }
-
-        /* --- SCREEN 3: SUCCESS --- */
-        .success-icon-wrapper {
-            display: flex;
-            justify-content: center;
-            margin-top: 40px;
-            margin-bottom: 24px;
-        }
-        .success-icon {
-            width: 80px;
-            height: 80px;
-            background-color: var(--accent-gold);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 40px;
-            box-shadow: 0 8px 24px rgba(184, 150, 46, 0.3);
-        }
-        .success-title {
-            text-align: center;
-            font-size: 24px;
-            margin-bottom: 8px;
-        }
-        .success-subtitle {
-            text-align: center;
-            color: var(--text-muted);
-            margin-bottom: 32px;
-        }
-
-        .link-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 16px;
             margin-bottom: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+            outline: none;
         }
-        .link-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            font-size: 15px;
-        }
-        .link-url {
-            font-family: monospace;
-            font-size: 13px;
-            color: var(--text-muted);
-            word-break: break-all;
-            background: var(--bg-color);
-            padding: 8px;
-            border-radius: 6px;
-        }
-        .copy-btn {
-            background: none;
-            border: 1px solid var(--accent-gold);
-            color: var(--accent-gold);
-            border-radius: 6px;
-            padding: 8px;
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s;
-        }
-        .copy-btn:active {
+        .invite-input:focus { border-color: var(--accent-gold); }
+        .error-text { color: var(--error-color); font-size: 13px; margin-top: -10px; margin-bottom: 16px; }
+        .cta-button {
             background: var(--accent-gold);
             color: white;
-        }
-
-        /* --- BUTTONS --- */
-        .cta-button {
-            background-color: var(--accent-gold);
-            color: #FFFFFF;
-            font-family: 'Inter', sans-serif;
-            font-weight: 600;
-            font-size: 16px;
             border: none;
             border-radius: 12px;
             padding: 18px;
             width: 100%;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
             margin-top: auto;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 16px rgba(184, 150, 46, 0.2);
-            transition: transform 0.1s, box-shadow 0.1s;
         }
-        .cta-button:active {
-            transform: scale(0.98);
-            box-shadow: 0 2px 8px rgba(184, 150, 46, 0.2);
-        }
-        .cta-button:disabled {
-            background-color: #CCCCCC;
-            box-shadow: none;
-            cursor: not-allowed;
-        }
-
-        .loader {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #FFFFFF;
-            border-bottom-color: transparent;
-            border-radius: 50%;
-            animation: rotation 1s linear infinite;
-        }
-        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
+        .cta-button:disabled { opacity: 0.6; }
+        .section { margin-bottom: 20px; }
         .d-none { display: none !important; }
     </style>
 </head>
 <body>
-
-    <!-- SCREEN 1: INVITE CODE -->
+    <!-- Screen 1: Invite Code -->
     <div id="screen-invite" class="screen">
-        <div class="logo-text">CHOPBAR</div>
-        
-        <h2 class="welcome-title">Добро пожаловать</h2>
-        <p class="subtitle">Введи инвайт-код, который прислал тебе администратор CHOPBAR</p>
-        
-        <div class="invite-input-wrapper">
-            <input type="text" id="input-invite" class="invite-input" placeholder="XXXXXX" maxlength="10" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+        <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
+            <div class="logo">CHOPBAR</div>
+            <p style="color: var(--text-muted); margin-top: 8px;">Подключение барбершопа</p>
         </div>
+        <p style="font-size: 15px; margin-bottom: 12px;">Введите инвайт-код:</p>
+        <input type="text" id="input-invite" class="invite-input" placeholder="XXXX-XXXX" maxlength="20">
         <div id="invite-error" class="error-text"></div>
-
-        <div style="flex-grow: 1;"></div>
-        
-        <button id="btn-check-invite" class="cta-button" onclick="checkInvite()">
-            <span id="btn-check-text">ПРОДОЛЖИТЬ →</span>
-            <span id="btn-check-loader" class="loader d-none"></span>
-        </button>
-        
-        <div class="support-link">Нет кода? Напиши <a href="https://t.me/chpk" target="_blank">@chpk</a></div>
+        <button id="btn-check-invite" class="cta-button" onclick="checkInvite()">Продолжить</button>
     </div>
 
-    <!-- SCREEN 2: FORM -->
-    <div id="screen-form" class="screen hidden">
-        <div class="nav-header">
-            <button class="back-btn" onclick="showScreen('screen-invite')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                Назад
-            </button>
+    <!-- Screen 2: Registration -->
+    <div id="screen-register" class="screen hidden">
+        <div class="header">
+            <div class="logo">CHOPBAR</div>
         </div>
-        
-        <h2 class="form-title">Расскажи о своём<br>барбершопе</h2>
-        
-        <div class="form-group">
-            <label class="form-label">Название <span>*</span></label>
-            <input type="text" id="input-name" class="form-input" placeholder="Black Beard">
+        <div class="card">
+            <div class="card-title">Информация о барбершопе</div>
+            <input type="text" id="reg-name" class="input-field" placeholder="Название" style="width: 100%; margin-bottom: 10px;">
+            <input type="text" id="reg-city" class="input-field" placeholder="Город" style="width: 100%; margin-bottom: 10px;">
+            <input type="text" id="reg-phone" class="input-field" placeholder="Телефон" style="width: 100%; margin-bottom: 10px;">
+            <input type="text" id="reg-instagram" class="input-field" placeholder="Instagram (необязательно)" style="width: 100%;">
         </div>
-        
-        <div class="form-group">
-            <label class="form-label">Город <span>*</span></label>
-            <input type="text" id="input-city" class="form-input" placeholder="Астана">
-        </div>
-        
-        <div class="form-group">
-            <label class="form-label">Телефон <span>*</span></label>
-            <input type="tel" id="input-phone" class="form-input" placeholder="+7 (___) ___-__-__">
-        </div>
-        
-        <div class="form-group">
-            <label class="form-label">Instagram или 2GIS</label>
-            <input type="text" id="input-social" class="form-input" placeholder="@username (необязательно)">
-        </div>
-
-        <div style="flex-grow: 1;"></div>
-        
-        <button id="btn-submit" class="cta-button" onclick="submitForm()">
-            <span id="btn-submit-text">ПОДКЛЮЧИТЬ →</span>
-            <span id="btn-submit-loader" class="loader d-none"></span>
-        </button>
+        <button class="cta-button" onclick="registerShop()">Создать барбершоп</button>
     </div>
 
-    <!-- SCREEN 3: SUCCESS -->
-    <div id="screen-success" class="screen hidden">
-        <div class="success-icon-wrapper">
-            <div class="success-icon">✓</div>
-        </div>
-        
-        <h2 class="success-title">Барбершоп подключён!</h2>
-        <p class="success-subtitle">Вот твои персональные ссылки:</p>
-
-        <div class="link-card">
-            <div class="link-header">💈 Для клиентов</div>
-            <div class="link-url" id="link-client">t.me/bot?start=...</div>
-            <button class="copy-btn" onclick="copyText('link-client', this)">Скопировать</button>
+    <!-- Screen 3: Dashboard -->
+    <div id="screen-dashboard" class="screen hidden">
+        <div class="header">
+            <div>
+                <div class="logo">CHOPBAR</div>
+                <div id="dashboard-shop-name" class="shop-name"></div>
+            </div>
         </div>
 
-        <div class="link-card">
-            <div class="link-header">👨‍💼 Для мастеров</div>
-            <div class="link-url" id="link-master">t.me/bot?start=...</div>
-            <button class="copy-btn" onclick="copyText('link-master', this)">Скопировать</button>
+        <!-- Status -->
+        <div class="card">
+            <div class="status-row">
+                <div>
+                    <div class="card-title">Статус</div>
+                    <span id="shop-status" class="status-badge status-open">Открыт</span>
+                </div>
+                <button id="btn-toggle-status" class="toggle-btn" onclick="toggleStatus()">Закрыть</button>
+            </div>
         </div>
 
-        <div class="link-card">
-            <div class="link-header">⚙️ Админ-панель</div>
-            <div class="link-url" id="link-admin">t.me/bot?start=...</div>
-            <button class="copy-btn" onclick="copyText('link-admin', this)">Скопировать</button>
+        <!-- Admins -->
+        <div class="card">
+            <div class="card-title">Администраторы</div>
+            <div class="input-row">
+                <input type="text" id="input-admin" class="input-field" placeholder="Telegram ID">
+                <button class="add-btn" onclick="addAdmin()">+</button>
+            </div>
+            <div id="admin-list" class="item-list"></div>
         </div>
-        
-        <div style="flex-grow: 1;"></div>
+
+        <!-- Barbers -->
+        <div class="card">
+            <div class="card-title">Мастера</div>
+            <div class="input-row">
+                <input type="text" id="input-barber-name" class="input-field" placeholder="Имя мастера">
+            </div>
+            <div class="input-row">
+                <input type="text" id="input-barber-id" class="input-field" placeholder="Telegram ID">
+                <button class="add-btn" onclick="addBarber()">+</button>
+            </div>
+            <div id="barber-list" class="item-list"></div>
+        </div>
+
+        <!-- Links -->
+        <div class="card">
+            <div class="card-title">Ссылки</div>
+            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Ссылка для клиентов:</div>
+            <div id="client-link" style="font-size: 12px; word-break: break-all; background: var(--bg-color); padding: 8px; border-radius: 6px; margin-bottom: 12px;"></div>
+            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Ссылка для мастеров:</div>
+            <div id="barber-link" style="font-size: 12px; word-break: break-all; background: var(--bg-color); padding: 8px; border-radius: 6px;"></div>
+        </div>
+
+        <button class="cta-button" onclick="logout()" style="background: var(--text-muted);">Выйти</button>
     </div>
 
     <script>
@@ -422,20 +269,21 @@
         tg.expand();
         tg.ready();
 
-        let validInviteCode = "";
+        let validInviteCode = null;
+        let currentShop = null;
+        let userId = tg.initDataUnsafe?.user?.id || null;
 
-        // Auto-fill invite code from URL if present
+        // URL params check
         const urlParams = new URLSearchParams(window.location.search);
-        const urlInvite = urlParams.get('invite') || tg.initDataUnsafe?.start_param || urlParams.get('startapp');
+        const urlInvite = urlParams.get('invite');
         if (urlInvite) {
-            document.getElementById('input-invite').value = urlInvite;
+            document.getElementById('input-invite').value = urlInvite.toUpperCase();
         }
 
-        // Auto-caps invite input
+        // Auto-uppercase invite
         document.getElementById('input-invite').addEventListener('input', function(e) {
             this.value = this.value.toUpperCase();
-            document.getElementById('invite-error').innerText = "";
-            this.classList.remove('shake');
+            document.getElementById('invite-error').innerText = '';
         });
 
         function showScreen(id) {
@@ -447,21 +295,11 @@
             const input = document.getElementById('input-invite');
             const code = input.value.trim();
             const errorDiv = document.getElementById('invite-error');
-            const btnText = document.getElementById('btn-check-text');
-            const btnLoader = document.getElementById('btn-check-loader');
-            const btn = document.getElementById('btn-check-invite');
 
             if (!code) {
-                errorDiv.innerText = "Введите код";
-                input.classList.add('shake');
-                setTimeout(() => input.classList.remove('shake'), 400);
+                errorDiv.innerText = 'Введите код';
                 return;
             }
-
-            btn.disabled = true;
-            btnText.classList.add('d-none');
-            btnLoader.classList.remove('d-none');
-            errorDiv.innerText = "";
 
             try {
                 const res = await fetch(`/api/check-invite?code=${encodeURIComponent(code)}`);
@@ -469,100 +307,214 @@
 
                 if (data.valid) {
                     validInviteCode = code;
-                    showScreen('screen-form');
+                    // Check if user already has a shop
+                    const shopRes = await fetch(`/api/shop-by-owner?telegram_id=${userId}`);
+                    const shopData = await shopRes.json();
+                    
+                    if (shopData.shop) {
+                        currentShop = shopData.shop;
+                        loadDashboard();
+                    } else {
+                        showScreen('screen-register');
+                    }
                 } else {
-                    errorDiv.innerText = "Неверный или уже использованный код";
-                    input.classList.add('shake');
-                    setTimeout(() => input.classList.remove('shake'), 400);
+                    errorDiv.innerText = 'Неверный или уже использованный код';
                 }
             } catch (err) {
-                errorDiv.innerText = "Ошибка сети. Попробуйте позже.";
-            } finally {
-                btn.disabled = false;
-                btnText.classList.remove('d-none');
-                btnLoader.classList.add('d-none');
+                errorDiv.innerText = 'Ошибка сети. Попробуйте позже.';
             }
         }
 
-        async function submitForm() {
-            const name = document.getElementById('input-name').value.trim();
-            const city = document.getElementById('input-city').value.trim();
-            const phone = document.getElementById('input-phone').value.trim();
-            const social = document.getElementById('input-social').value.trim();
+        async function registerShop() {
+            const name = document.getElementById('reg-name').value.trim();
+            const city = document.getElementById('reg-city').value.trim();
+            const phone = document.getElementById('reg-phone').value.trim();
+            const instagram = document.getElementById('reg-instagram').value.trim();
 
             if (!name || !city || !phone) {
-                tg.showAlert("Заполни обязательные поля (Название, Город, Телефон)");
+                tg.showAlert('Заполните обязательные поля');
                 return;
             }
-
-            const btn = document.getElementById('btn-submit');
-            const btnText = document.getElementById('btn-submit-text');
-            const btnLoader = document.getElementById('btn-submit-loader');
-            
-            btn.disabled = true;
-            btnText.classList.add('d-none');
-            btnLoader.classList.remove('d-none');
-
-            const payload = {
-                name: name,
-                city: city,
-                phone: phone,
-                instagram: social,
-                invite_code: validInviteCode,
-                owner_telegram_id: tg.initDataUnsafe?.user?.id?.toString() || '0'
-            };
 
             try {
                 const res = await fetch('/api/register-barbershop', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({
+                        name, city, phone, instagram,
+                        invite_code: validInviteCode,
+                        owner_telegram_id: userId
+                    })
                 });
-
                 const data = await res.json();
-
+                
                 if (data.success) {
-                    document.getElementById('link-client').innerText = data.client_link;
-                    document.getElementById('link-master').innerText = data.crew_link;
-                    document.getElementById('link-admin').innerText = data.admin_link;
-                    showScreen('screen-success');
+                    currentShop = data.shop;
+                    loadDashboard();
                 } else {
-                    tg.showAlert(data.error || "Произошла ошибка при регистрации.");
+                    tg.showAlert(data.error || 'Ошибка регистрации');
                 }
             } catch (err) {
-                tg.showAlert("Ошибка сети: " + err.message);
-            } finally {
-                btn.disabled = false;
-                btnText.classList.remove('d-none');
-                btnLoader.classList.add('d-none');
+                tg.showAlert('Ошибка сети');
             }
         }
 
-        function copyText(elementId, btnElement) {
-            const text = document.getElementById(elementId).innerText;
+        function loadDashboard() {
+            document.getElementById('dashboard-shop-name').innerText = currentShop.name;
+            document.getElementById('client-link').innerText = `${window.location.origin}/static/index.html?slug=${currentShop.slug}`;
+            document.getElementById('barber-link').innerText = `${window.location.origin}/static/barber.html?slug=${currentShop.slug}`;
             
-            // Fallback for older Telegram versions or browsers
-            const textArea = document.createElement("textarea");
-            textArea.value = text;
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                const originalText = btnElement.innerText;
-                btnElement.innerText = "Скопировано!";
-                btnElement.style.background = "var(--accent-gold)";
-                btnElement.style.color = "white";
-                
-                setTimeout(() => {
-                    btnElement.innerText = originalText;
-                    btnElement.style.background = "none";
-                    btnElement.style.color = "var(--accent-gold)";
-                }, 2000);
-            } catch (err) {
-                console.error('Oops, unable to copy', err);
-            }
-            document.body.removeChild(textArea);
+            updateStatusUI(currentShop.is_active !== false);
+            loadAdmins();
+            loadBarbers();
+            
+            showScreen('screen-dashboard');
         }
+
+        function updateStatusUI(isOpen) {
+            const statusEl = document.getElementById('shop-status');
+            const btnEl = document.getElementById('btn-toggle-status');
+            
+            if (isOpen) {
+                statusEl.className = 'status-badge status-open';
+                statusEl.innerText = 'Открыт';
+                btnEl.innerText = 'Закрыть';
+            } else {
+                statusEl.className = 'status-badge status-closed';
+                statusEl.innerText = 'Закрыт';
+                btnEl.innerText = 'Открыть';
+            }
+        }
+
+        async function toggleStatus() {
+            const newStatus = document.getElementById('shop-status').innerText !== 'Открыт';
+            
+            try {
+                const res = await fetch(`/api/barbershop/${currentShop.id}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_active: newStatus })
+                });
+                
+                if (res.ok) {
+                    updateStatusUI(newStatus);
+                }
+            } catch (err) {
+                tg.showAlert('Ошибка обновления статуса');
+            }
+        }
+
+        async function addAdmin() {
+            const id = document.getElementById('input-admin').value.trim();
+            if (!id) return;
+
+            try {
+                const res = await fetch(`/api/barbershop/${currentShop.id}/admins`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ telegram_id: id })
+                });
+                
+                if (res.ok) {
+                    document.getElementById('input-admin').value = '';
+                    loadAdmins();
+                }
+            } catch (err) {
+                tg.showAlert('Ошибка добавления админа');
+            }
+        }
+
+        async function loadAdmins() {
+            try {
+                const res = await fetch(`/api/barbershop/${currentShop.id}/admins`);
+                const data = await res.json();
+                
+                const list = document.getElementById('admin-list');
+                list.innerHTML = data.admins?.map(a => `
+                    <div class="item-row">
+                        <span class="item-id">${a.telegram_id}</span>
+                        <button class="remove-btn" onclick="removeAdmin('${a.telegram_id}')">×</button>
+                    </div>
+                `).join('') || '<div style="color: var(--text-muted); padding: 10px;">Нет администраторов</div>';
+            } catch (err) {
+                console.error('Error loading admins:', err);
+            }
+        }
+
+        async function removeAdmin(id) {
+            try {
+                await fetch(`/api/barbershop/${currentShop.id}/admins/${id}`, { method: 'DELETE' });
+                loadAdmins();
+            } catch (err) {
+                tg.showAlert('Ошибка удаления');
+            }
+        }
+
+        async function addBarber() {
+            const name = document.getElementById('input-barber-name').value.trim();
+            const telegramId = document.getElementById('input-barber-id').value.trim();
+            
+            if (!name || !telegramId) {
+                tg.showAlert('Введите имя и Telegram ID');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/barbershop/${currentShop.id}/barbers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, telegram_id: telegramId })
+                });
+                
+                if (res.ok) {
+                    document.getElementById('input-barber-name').value = '';
+                    document.getElementById('input-barber-id').value = '';
+                    loadBarbers();
+                }
+            } catch (err) {
+                tg.showAlert('Ошибка добавления мастера');
+            }
+        }
+
+        async function loadBarbers() {
+            try {
+                const res = await fetch(`/api/barbershop/${currentShop.id}/barbers`);
+                const data = await res.json();
+                
+                const list = document.getElementById('barber-list');
+                list.innerHTML = data.barbers?.map(b => `
+                    <div class="item-row">
+                        <div>
+                            <div style="font-weight: 600;">${b.name}</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">ID: ${b.telegram_id || 'не привязан'}</div>
+                        </div>
+                        <button class="remove-btn" onclick="removeBarber('${b.id}')">×</button>
+                    </div>
+                `).join('') || '<div style="color: var(--text-muted); padding: 10px;">Нет мастеров</div>';
+            } catch (err) {
+                console.error('Error loading barbers:', err);
+            }
+        }
+
+        async function removeBarber(id) {
+            try {
+                await fetch(`/api/barbershop/${currentShop.id}/barbers/${id}`, { method: 'DELETE' });
+                loadBarbers();
+            } catch (err) {
+                tg.showAlert('Ошибка удаления');
+            }
+        }
+
+        function logout() {
+            currentShop = null;
+            validInviteCode = null;
+            showScreen('screen-invite');
+        }
+
+        // Enter key handlers
+        document.getElementById('input-invite').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkInvite();
+        });
     </script>
 </body>
 </html>

@@ -927,6 +927,100 @@ async def mark_booking_done(booking_id: str):
     return await update_booking_status(booking_id, StatusUpdate(status='done'))
 
 
+
+# === BARBER SHOP MANAGEMENT API ===
+
+@app.get("/api/shop-by-owner")
+async def get_shop_by_owner(telegram_id: str):
+    """Get barbershop by owner telegram_id"""
+    if not supabase: return {"error": "DB error"}
+    try:
+        res = supabase.table("barbershops").select("*").eq("owner_telegram_id", telegram_id).execute()
+        if res.data:
+            return {"shop": res.data[0]}
+        return {"shop": None}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/barbershop/{shop_id}/status")
+async def update_shop_status(shop_id: int, status: dict):
+    """Update barbershop open/closed status"""
+    if not supabase: return {"error": "DB error"}
+    try:
+        supabase.table("barbershops").update({"is_active": status.get("is_active", True)}).eq("id", shop_id).execute()
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/barbershop/{shop_id}/admins")
+async def get_shop_admins(shop_id: int):
+    """Get all admins for barbershop"""
+    if not supabase: return {"admins": []}
+    try:
+        res = supabase.table("barbershop_admins").select("*").eq("barbershop_id", shop_id).execute()
+        return {"admins": res.data}
+    except Exception as e:
+        return {"error": str(e), "admins": []}
+
+@app.post("/api/barbershop/{shop_id}/admins")
+async def add_shop_admin(shop_id: int, admin: dict):
+    """Add admin to barbershop"""
+    if not supabase: return {"error": "DB error"}
+    try:
+        supabase.table("barbershop_admins").insert({
+            "barbershop_id": shop_id,
+            "telegram_id": admin.get("telegram_id")
+        }).execute()
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.delete("/api/barbershop/{shop_id}/admins/{telegram_id}")
+async def remove_shop_admin(shop_id: int, telegram_id: str):
+    """Remove admin from barbershop"""
+    if not supabase: return {"error": "DB error"}
+    try:
+        supabase.table("barbershop_admins").delete().eq("barbershop_id", shop_id).eq("telegram_id", telegram_id).execute()
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/barbershop/{shop_id}/barbers")
+async def get_shop_barbers(shop_id: int):
+    """Get all barbers for barbershop"""
+    if not supabase: return {"barbers": []}
+    try:
+        res = supabase.table("barbers").select("*").eq("barbershop_id", shop_id).execute()
+        return {"barbers": res.data}
+    except Exception as e:
+        return {"error": str(e), "barbers": []}
+
+@app.post("/api/barbershop/{shop_id}/barbers")
+async def add_shop_barber(shop_id: int, barber: dict):
+    """Add barber to barbershop"""
+    if not supabase: return {"error": "DB error"}
+    try:
+        result = supabase.table("barbers").insert({
+            "barbershop_id": shop_id,
+            "name": barber.get("name"),
+            "telegram_id": barber.get("telegram_id"),
+            "specialty": barber.get("specialty", "Мастер"),
+            "experience": barber.get("experience", "1 год")
+        }).execute()
+        return {"success": True, "barber": result.data[0] if result.data else None}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.delete("/api/barbershop/{shop_id}/barbers/{barber_id}")
+async def remove_shop_barber(shop_id: int, barber_id: str):
+    """Remove barber from barbershop"""
+    if not supabase: return {"error": "DB error"}
+    try:
+        supabase.table("barbers").delete().eq("id", barber_id).eq("barbershop_id", shop_id).execute()
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
